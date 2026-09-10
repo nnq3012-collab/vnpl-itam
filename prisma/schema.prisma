@@ -1,0 +1,131 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+enum Role {
+  IT
+  HR
+  FINANCE
+}
+
+enum DeviceStatus {
+  IN_STOCK
+  DEPLOYED
+  IN_REPAIR
+  LOST
+  STOLEN
+  BROKEN
+  RETIRED
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  RESIGNED
+  TRANSFERRED
+}
+
+enum AuditAction {
+  INITIAL_REGISTRATION
+  LIFECYCLE_UPDATE
+  REASSIGNMENT
+  HARDWARE_CHANGE
+  BULK_IMPORT
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  fullName     String
+  role         Role
+  createdAt    DateTime @default(now())
+}
+
+// A Center/Department pair, matching the existing Excel "Locations" sheet.
+// Device.location references one row here, giving Center + Department together.
+model Location {
+  id         String     @id @default(cuid())
+  center     String
+  department String
+  devices    Device[]
+  employees  Employee[]
+
+  @@unique([center, department])
+}
+
+model Employee {
+  id             String         @id @default(cuid())
+  employeeId     String         @unique
+  fullName       String
+  email          String?
+  location       Location?      @relation(fields: [locationId], references: [id])
+  locationId     String?
+  status         EmployeeStatus @default(ACTIVE)
+  devices        Device[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([locationId])
+}
+
+model DeviceType {
+  id       String   @id @default(cuid())
+  name     String   @unique
+  // When true, Register/Update Device shows the CPU/RAM/Storage fields for
+  // this type (e.g. Laptop, PC) — hidden for types where specs don't apply
+  // (Monitor, Scanner, Mobile Device).
+  hasSpecs Boolean  @default(false)
+  devices  Device[]
+}
+
+model Device {
+  id                 String       @id @default(cuid())
+  assetId            String       @unique
+  deviceType         DeviceType   @relation(fields: [deviceTypeId], references: [id])
+  deviceTypeId       String
+  makeModel          String?
+  cpu                String?
+  ram                String?
+  storage            String?
+  serialNumber       String?
+  status             DeviceStatus @default(IN_STOCK)
+  location           Location     @relation(fields: [locationId], references: [id])
+  locationId         String
+  assignedUser       Employee?    @relation(fields: [assignedUserId], references: [id])
+  assignedUserId     String?
+  // Denormalized snapshot of the employee's email at time of assignment —
+  // deliberately does not update if the employee's email changes later.
+  // Only set when assignedUserId is set; null when unassigned.
+  assignedUserEmail  String?
+  dateRegistered     DateTime     @default(now())
+  lastUpdated        DateTime     @updatedAt
+
+  @@index([status])
+  @@index([locationId])
+  @@index([assignedUserId])
+}
+
+// Immutable history. AssetId/operator are plain strings (not FKs) so entries
+// survive even if the referenced device or user account is later deleted.
+model AuditLog {
+  id             String      @id @default(cuid())
+  timestamp      DateTime    @default(now())
+  assetId        String
+  action         AuditAction
+  previousState  String?
+  newState       String?
+  operator       String
+  reason         String?
+
+  @@index([assetId])
+  @@index([timestamp])
+}

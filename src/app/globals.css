@@ -24,3 +24,15 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Form controls always render as light widgets (white background), so force
+   dark text/background here regardless of the page's dark-mode colors above
+   — otherwise light --foreground text becomes invisible on their white bg. */
+input,
+select,
+textarea {
+  background-color: #ffffff;
+  color: #0f172a;
+  color-scheme: light;
+}
+

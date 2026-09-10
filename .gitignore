@@ -39,3 +39,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/src/generated/prisma
+.neon
+
+# local-only data — contains real employee PII, must never be committed
+*.xlsm
+*.db
+*.db-journal
+.claude/
