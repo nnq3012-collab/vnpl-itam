@@ -105,9 +105,31 @@ export default async function DevicesPage({
     );
   }
 
+  const exportParams = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v && k !== "sort" && k !== "dir") exportParams.set(k, v);
+  });
+  const exportQuery = exportParams.toString();
+
   return (
     <div className="space-y-4">
-      <h1 className="text-lg font-semibold text-slate-900">Device Master</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-semibold text-slate-900">Device Master</h1>
+        <div className="flex gap-2">
+          <a
+            href={`/api/export/devices?${exportQuery}${exportQuery ? "&" : ""}format=xlsx`}
+            className="rounded-md border border-slate-300 text-xs font-medium px-3 py-1.5 hover:bg-slate-50"
+          >
+            Export .xlsx
+          </a>
+          <a
+            href={`/api/export/devices?${exportQuery}${exportQuery ? "&" : ""}format=csv`}
+            className="rounded-md border border-slate-300 text-xs font-medium px-3 py-1.5 hover:bg-slate-50"
+          >
+            Export .csv
+          </a>
+        </div>
+      </div>
 
       <form className="bg-white rounded-lg shadow p-4 flex flex-wrap gap-3 items-end" method="get">
         <div>

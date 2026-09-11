@@ -136,8 +136,13 @@ function DeviceImport() {
 
   return (
     <div className="bg-white rounded-lg shadow p-6 space-y-4">
+      <div className="flex items-center justify-between">
+        <label className="block text-sm font-medium text-slate-700">Upload Device Master file (.xlsx, .xls, .csv)</label>
+        <a href="/api/import/devices/template" className="text-xs text-blue-600 hover:underline whitespace-nowrap ml-4">
+          Download template (.xlsx)
+        </a>
+      </div>
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Upload Device Master file (.xlsx, .xls, .csv)</label>
         <input type="file" accept=".xlsx,.xls,.csv" onChange={handleFile} className="text-sm" />
         {sheetUsed && <p className="text-xs text-slate-400 mt-1">Reading sheet: &quot;{sheetUsed}&quot;</p>}
       </div>
@@ -271,8 +276,13 @@ function EmployeeImport() {
 
   return (
     <div className="bg-white rounded-lg shadow p-6 space-y-4">
+      <div className="flex items-center justify-between">
+        <label className="block text-sm font-medium text-slate-700">Upload Employee roster (.xlsx, .xls, .csv)</label>
+        <a href="/api/import/employees/template" className="text-xs text-blue-600 hover:underline whitespace-nowrap ml-4">
+          Download template (.xlsx)
+        </a>
+      </div>
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Upload Employee roster (.xlsx, .xls, .csv)</label>
         <input type="file" accept=".xlsx,.xls,.csv" onChange={handleFile} className="text-sm" />
         {sheetUsed && <p className="text-xs text-slate-400 mt-1">Reading sheet: &quot;{sheetUsed}&quot;</p>}
       </div>
