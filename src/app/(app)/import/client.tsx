@@ -7,6 +7,9 @@ type DeviceImportRow = {
   assetId: string;
   deviceType: string;
   makeModel?: string;
+  cpu?: string;
+  ram?: string;
+  storage?: string;
   serialNumber?: string;
   status?: string;
   center: string;
@@ -89,6 +92,9 @@ function DeviceImport() {
           assetId: pick(r, ["Asset ID", "AssetId"]),
           deviceType: pick(r, ["Device Type", "DeviceType"]),
           makeModel: pick(r, ["Make/Model", "Make Model", "MakeModel"]),
+          cpu: pick(r, ["CPU"]),
+          ram: pick(r, ["RAM"]),
+          storage: pick(r, ["Storage"]),
           serialNumber: pick(r, ["Serial Number", "SerialNumber"]),
           status: pick(r, ["Status"]),
           center: pick(r, ["Center", "Location"]),
@@ -162,6 +168,9 @@ function DeviceImport() {
                   <th className="px-2 py-1.5 text-left">Asset ID</th>
                   <th className="px-2 py-1.5 text-left">Device Type</th>
                   <th className="px-2 py-1.5 text-left">Make/Model</th>
+                  <th className="px-2 py-1.5 text-left">CPU</th>
+                  <th className="px-2 py-1.5 text-left">RAM</th>
+                  <th className="px-2 py-1.5 text-left">Storage</th>
                   <th className="px-2 py-1.5 text-left">Status</th>
                   <th className="px-2 py-1.5 text-left">Center</th>
                   <th className="px-2 py-1.5 text-left">Department</th>
@@ -175,6 +184,9 @@ function DeviceImport() {
                     <td className="px-2 py-1">{r.assetId || "—"}</td>
                     <td className="px-2 py-1">{r.deviceType || "—"}</td>
                     <td className="px-2 py-1 max-w-xs truncate">{r.makeModel || "—"}</td>
+                    <td className="px-2 py-1">{r.cpu || "—"}</td>
+                    <td className="px-2 py-1">{r.ram || "—"}</td>
+                    <td className="px-2 py-1">{r.storage || "—"}</td>
                     <td className="px-2 py-1">{r.status || "—"}</td>
                     <td className="px-2 py-1">{r.center || "—"}</td>
                     <td className="px-2 py-1">{r.department || "—"}</td>

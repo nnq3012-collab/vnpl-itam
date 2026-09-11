@@ -4,6 +4,26 @@ import { prisma } from "@/lib/prisma";
 import { DeviceStatus } from "@prisma/client";
 import SearchBox from "./search-box";
 
+const STATUS_LABELS: Record<DeviceStatus, string> = {
+  IN_STOCK: "In Stock",
+  DEPLOYED: "Deployed",
+  IN_REPAIR: "In Repair",
+  LOST: "Lost",
+  STOLEN: "Stolen",
+  BROKEN: "Broken",
+  RETIRED: "Retired",
+};
+
+const STATUS_BADGE: Record<DeviceStatus, string> = {
+  IN_STOCK: "bg-blue-50 text-blue-700",
+  DEPLOYED: "bg-green-50 text-green-700",
+  IN_REPAIR: "bg-amber-50 text-amber-700",
+  LOST: "bg-red-50 text-red-700",
+  STOLEN: "bg-red-50 text-red-700",
+  BROKEN: "bg-red-50 text-red-700",
+  RETIRED: "bg-slate-100 text-slate-700",
+};
+
 async function getStatusCounts() {
   const grouped = await prisma.device.groupBy({
     by: ["status"],
@@ -24,34 +44,56 @@ async function getStatusCounts() {
   };
 }
 
-type CenterBreakdown = {
-  center: string;
-  total: number;
-  departments: { department: string; count: number }[];
-};
+type StatusCounts = Partial<Record<DeviceStatus, number>>;
+type DeptBreakdown = { department: string; total: number; statusCounts: StatusCounts };
+type CenterBreakdown = { center: string; total: number; statusCounts: StatusCounts; departments: DeptBreakdown[] };
+
+function addStatus(counts: StatusCounts, status: DeviceStatus) {
+  counts[status] = (counts[status] ?? 0) + 1;
+}
 
 async function getLocationBreakdown(): Promise<CenterBreakdown[]> {
   const devices = await prisma.device.findMany({
-    select: { location: { select: { center: true, department: true } } },
+    select: { status: true, location: { select: { center: true, department: true } } },
   });
 
-  const byCenter = new Map<string, Map<string, number>>();
+  const byCenter = new Map<string, { statusCounts: StatusCounts; depts: Map<string, DeptBreakdown> }>();
+
   for (const d of devices) {
     const { center, department } = d.location;
-    if (!byCenter.has(center)) byCenter.set(center, new Map());
-    const depts = byCenter.get(center)!;
-    depts.set(department, (depts.get(department) ?? 0) + 1);
+    if (!byCenter.has(center)) byCenter.set(center, { statusCounts: {}, depts: new Map() });
+    const centerEntry = byCenter.get(center)!;
+    addStatus(centerEntry.statusCounts, d.status);
+
+    if (!centerEntry.depts.has(department)) {
+      centerEntry.depts.set(department, { department, total: 0, statusCounts: {} });
+    }
+    const deptEntry = centerEntry.depts.get(department)!;
+    deptEntry.total += 1;
+    addStatus(deptEntry.statusCounts, d.status);
   }
 
-  const result: CenterBreakdown[] = Array.from(byCenter.entries()).map(([center, depts]) => ({
+  const result: CenterBreakdown[] = Array.from(byCenter.entries()).map(([center, entry]) => ({
     center,
-    total: Array.from(depts.values()).reduce((a, b) => a + b, 0),
-    departments: Array.from(depts.entries())
-      .map(([department, count]) => ({ department, count }))
-      .sort((a, b) => b.count - a.count),
+    total: Object.values(entry.statusCounts).reduce((a, b) => a + b, 0),
+    statusCounts: entry.statusCounts,
+    departments: Array.from(entry.depts.values()).sort((a, b) => b.total - a.total),
   }));
 
   return result.sort((a, b) => b.total - a.total);
+}
+
+function StatusChips({ statusCounts }: { statusCounts: StatusCounts }) {
+  const entries = (Object.entries(statusCounts) as [DeviceStatus, number][]).sort((a, b) => b[1] - a[1]);
+  return (
+    <div className="flex flex-wrap gap-1 justify-end">
+      {entries.map(([status, count]) => (
+        <span key={status} className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[status]}`}>
+          {count} {STATUS_LABELS[status]}
+        </span>
+      ))}
+    </div>
+  );
 }
 
 export default async function DashboardPage() {
@@ -96,7 +138,8 @@ export default async function DashboardPage() {
               <tr>
                 <th className="text-left pb-2">Center</th>
                 <th className="text-left pb-2">Department</th>
-                <th className="text-right pb-2">Devices</th>
+                <th className="text-right pb-2 w-16">Total</th>
+                <th className="text-right pb-2">Status Breakdown</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -109,6 +152,9 @@ export default async function DashboardPage() {
                       </Link>
                     </td>
                     <td className="py-1.5 text-right font-semibold text-slate-900">{c.total}</td>
+                    <td className="py-1.5">
+                      <StatusChips statusCounts={c.statusCounts} />
+                    </td>
                   </tr>
                   {c.departments.map((d) => (
                     <tr key={`${c.center}-${d.department}`}>
@@ -121,14 +167,17 @@ export default async function DashboardPage() {
                           {d.department}
                         </Link>
                       </td>
-                      <td className="py-1 text-right text-slate-600">{d.count}</td>
+                      <td className="py-1 text-right text-slate-600">{d.total}</td>
+                      <td className="py-1">
+                        <StatusChips statusCounts={d.statusCounts} />
+                      </td>
                     </tr>
                   ))}
                 </Fragment>
               ))}
               {breakdown.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="py-6 text-center text-slate-400">
+                  <td colSpan={4} className="py-6 text-center text-slate-400">
                     No devices registered yet.
                   </td>
                 </tr>
