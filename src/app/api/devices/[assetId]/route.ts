@@ -22,6 +22,39 @@ const IT_ONLY_FIELDS = [
   "department",
 ] as const;
 
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ assetId: string }> }
+) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (session.role !== Role.IT) {
+    return NextResponse.json({ error: "Forbidden — only IT can delete devices" }, { status: 403 });
+  }
+
+  const { assetId } = await params;
+  const device = await prisma.device.findUnique({
+    where: { assetId },
+    include: { deviceType: true, location: true, assignedUser: true },
+  });
+  if (!device) return NextResponse.json({ error: "Device not found" }, { status: 404 });
+
+  await prisma.auditLog.create({
+    data: {
+      assetId: device.assetId,
+      action: AuditAction.LIFECYCLE_UPDATE,
+      previousState: `${device.status} @ ${device.location.center} / ${device.location.department} — ${device.assignedUser?.fullName ?? "Unassigned"}`,
+      newState: "Deleted",
+      operator: session.fullName,
+      reason: null,
+    },
+  });
+
+  await prisma.device.delete({ where: { id: device.id } });
+
+  return NextResponse.json({ ok: true });
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ assetId: string }> }

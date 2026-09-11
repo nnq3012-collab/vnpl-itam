@@ -4,7 +4,12 @@ import { prisma } from "@/lib/prisma";
 import { Role } from "@prisma/client";
 import UpdateDeviceClient from "./update-client";
 
-export default async function UpdateDevicePage() {
+export default async function UpdateDevicePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ assetId?: string }>;
+}) {
+  const { assetId: initialAssetId } = await searchParams;
   const session = await getSession();
   if (!session) redirect("/login");
   if (session.role === Role.FINANCE) {
@@ -32,6 +37,7 @@ export default async function UpdateDevicePage() {
       <h1 className="text-lg font-semibold text-slate-900 mb-4">Update Device</h1>
       <UpdateDeviceClient
         role={session.role}
+        initialAssetId={initialAssetId}
         devices={devices.map((d) => ({
           id: d.id,
           assetId: d.assetId,

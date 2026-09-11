@@ -36,15 +36,18 @@ export default function UpdateDeviceClient({
   deviceTypes,
   locations,
   employees,
+  initialAssetId,
 }: {
   role: "IT" | "HR" | "FINANCE";
   devices: DeviceRow[];
   deviceTypes: DeviceType[];
   locations: Location[];
   employees: Employee[];
+  initialAssetId?: string;
 }) {
   const router = useRouter();
-  const [selectedAssetDeviceId, setSelectedAssetDeviceId] = useState<string | null>(null);
+  const preselected = initialAssetId ? devices.find((d) => d.assetId === initialAssetId) ?? null : null;
+  const [selectedAssetDeviceId, setSelectedAssetDeviceId] = useState<string | null>(preselected?.id ?? null);
   const device = devices.find((d) => d.id === selectedAssetDeviceId) ?? null;
 
   const assetOptions = useMemo(

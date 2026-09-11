@@ -1,6 +1,9 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { DeviceStatus, Prisma } from "@prisma/client";
+import { DeviceStatus, Prisma, Role } from "@prisma/client";
+import { getSession } from "@/lib/session";
 import SelectAllCheckbox from "./select-all";
+import DeleteDeviceButton from "./delete-button";
 
 const STATUS_LABELS: Record<DeviceStatus, string> = {
   IN_STOCK: "In Stock",
@@ -59,6 +62,9 @@ export default async function DevicesPage({
   searchParams: Promise<SearchParams>;
 }) {
   const params = await searchParams;
+  const session = await getSession();
+  const canEdit = session?.role === Role.IT || session?.role === Role.HR;
+  const canDelete = session?.role === Role.IT;
 
   const where: Prisma.DeviceWhereInput = {};
   if (params.assetId) where.assetId = { contains: params.assetId };
@@ -118,13 +124,13 @@ export default async function DevicesPage({
         <div className="flex gap-2">
           <a
             href={`/api/export/devices?${exportQuery}${exportQuery ? "&" : ""}format=xlsx`}
-            className="rounded-md border border-slate-300 text-xs font-medium px-3 py-1.5 hover:bg-slate-50"
+            className="rounded-md border border-slate-300 bg-white text-xs font-medium text-slate-900 px-3 py-1.5 hover:bg-slate-50"
           >
             Export .xlsx
           </a>
           <a
             href={`/api/export/devices?${exportQuery}${exportQuery ? "&" : ""}format=csv`}
-            className="rounded-md border border-slate-300 text-xs font-medium px-3 py-1.5 hover:bg-slate-50"
+            className="rounded-md border border-slate-300 bg-white text-xs font-medium text-slate-900 px-3 py-1.5 hover:bg-slate-50"
           >
             Export .csv
           </a>
@@ -226,6 +232,7 @@ export default async function DevicesPage({
               <th className="px-4 py-2 text-left">Assigned Email</th>
               <th className="px-4 py-2 text-left">Date Registered</th>
               <th className="px-4 py-2 text-left">{sortLink("lastUpdated", "Last Updated")}</th>
+              {canDelete && <th className="px-4 py-2 text-left">Actions</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -234,8 +241,16 @@ export default async function DevicesPage({
                 <td className="px-4 py-2">
                   <input type="checkbox" name="assetId" value={d.assetId} className="h-4 w-4 rounded border-slate-300" />
                 </td>
-                <td className="px-4 py-2 font-medium text-slate-900">{d.assetId}</td>
-                <td className="px-4 py-2">{d.deviceType.name}</td>
+                <td className="px-4 py-2 font-medium text-slate-900">
+                  {canEdit ? (
+                    <Link href={`/devices/update?assetId=${encodeURIComponent(d.assetId)}`} className="text-blue-600 hover:underline">
+                      {d.assetId}
+                    </Link>
+                  ) : (
+                    d.assetId
+                  )}
+                </td>
+                <td className="px-4 py-2 text-slate-900">{d.deviceType.name}</td>
                 <td className="px-4 py-2 text-slate-600 max-w-xs truncate">{d.makeModel ?? "—"}</td>
                 <td className="px-4 py-2 text-slate-600">{d.cpu ?? "—"}</td>
                 <td className="px-4 py-2 text-slate-600">{d.ram ?? "—"}</td>
@@ -252,11 +267,16 @@ export default async function DevicesPage({
                 <td className="px-4 py-2 text-slate-600">{d.assignedUserEmail ?? "—"}</td>
                 <td className="px-4 py-2 text-slate-500">{d.dateRegistered.toLocaleDateString()}</td>
                 <td className="px-4 py-2 text-slate-500">{d.lastUpdated.toLocaleDateString()}</td>
+                {canDelete && (
+                  <td className="px-4 py-2">
+                    <DeleteDeviceButton assetId={d.assetId} />
+                  </td>
+                )}
               </tr>
             ))}
             {devices.length === 0 && (
               <tr>
-                <td colSpan={15} className="px-4 py-8 text-center text-slate-400">
+                <td colSpan={canDelete ? 16 : 15} className="px-4 py-8 text-center text-slate-400">
                   No devices match the current filters.
                 </td>
               </tr>
