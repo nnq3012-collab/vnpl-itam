@@ -26,3 +26,11 @@ export function isReadOnly(role: Role): boolean {
 export function requireRole(session: SessionPayload | null, roles: Role[]): boolean {
   return !!session && roles.includes(session.role);
 }
+
+/** Deleting a device is restricted to specific named accounts, not the whole
+ * IT role — by explicit user request, narrower than every other IT action. */
+const DEVICE_DELETE_USERNAMES = ["it_admin"];
+
+export function canDeleteDevices(username: string | undefined): boolean {
+  return !!username && DEVICE_DELETE_USERNAMES.includes(username);
+}

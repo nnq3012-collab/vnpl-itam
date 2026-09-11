@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { AuditAction, DeviceStatus, EmployeeStatus, Role } from "@prisma/client";
+import { canDeleteDevices } from "@/lib/rbac";
 
 const REASON_REQUIRED_STATUSES: DeviceStatus[] = [
   DeviceStatus.LOST,
@@ -28,8 +29,8 @@ export async function DELETE(
 ) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (session.role !== Role.IT) {
-    return NextResponse.json({ error: "Forbidden — only IT can delete devices" }, { status: 403 });
+  if (!canDeleteDevices(session.username)) {
+    return NextResponse.json({ error: "Forbidden — you do not have permission to delete devices" }, { status: 403 });
   }
 
   const { assetId } = await params;

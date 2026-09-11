@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { DeviceStatus, Prisma, Role } from "@prisma/client";
 import { getSession } from "@/lib/session";
+import { canDeleteDevices } from "@/lib/rbac";
 import SelectAllCheckbox from "./select-all";
 import DeleteDeviceButton from "./delete-button";
 
@@ -64,7 +65,7 @@ export default async function DevicesPage({
   const params = await searchParams;
   const session = await getSession();
   const canEdit = session?.role === Role.IT || session?.role === Role.HR;
-  const canDelete = session?.role === Role.IT;
+  const canDelete = canDeleteDevices(session?.username);
 
   const where: Prisma.DeviceWhereInput = {};
   if (params.assetId) where.assetId = { contains: params.assetId };
