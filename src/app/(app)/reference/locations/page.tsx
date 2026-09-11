@@ -7,10 +7,10 @@ import LocationsClient from "./client";
 export default async function LocationsPage() {
   const session = await getSession();
   if (!session) redirect("/login");
-  if (session.role !== Role.IT) {
+  if (session.role !== Role.IT && session.role !== Role.HR) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
-        <p className="text-sm text-red-600">Restricted to IT.</p>
+        <p className="text-sm text-red-600">Restricted to IT and HR.</p>
       </div>
     );
   }

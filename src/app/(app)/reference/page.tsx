@@ -6,18 +6,20 @@ import { Role } from "@prisma/client";
 export default async function ReferenceIndexPage() {
   const session = await getSession();
   if (!session) redirect("/login");
-  if (session.role !== Role.IT) {
+  if (session.role !== Role.IT && session.role !== Role.HR) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
         <p className="text-sm text-red-600">
-          Reference list management is restricted to IT.
+          Reference list management is restricted to IT and HR.
         </p>
       </div>
     );
   }
 
   const links = [
-    { href: "/reference/device-types", label: "Device Types", desc: "Editable list of device categories (Laptop, PC, Monitor, ...) and whether they show CPU/RAM/Storage fields." },
+    ...(session.role === Role.IT
+      ? [{ href: "/reference/device-types", label: "Device Types", desc: "Editable list of device categories (Laptop, PC, Monitor, ...) and whether they show CPU/RAM/Storage fields. IT only." }]
+      : []),
     { href: "/reference/locations", label: "Locations", desc: "Center / Department pairs used across the app." },
     { href: "/reference/employees", label: "Employees", desc: "Employee directory used for device assignment." },
   ];

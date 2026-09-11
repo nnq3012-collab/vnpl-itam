@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireIT } from "@/lib/api-guard";
+import { requireITorHR } from "@/lib/api-guard";
 import { Prisma } from "@prisma/client";
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const guard = await requireIT();
+  const guard = await requireITorHR();
   if ("error" in guard) return guard.error;
 
   const { id } = await params;
@@ -33,7 +33,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const guard = await requireIT();
+  const guard = await requireITorHR();
   if ("error" in guard) return guard.error;
 
   const { id } = await params;

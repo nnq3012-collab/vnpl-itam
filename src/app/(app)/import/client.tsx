@@ -22,6 +22,7 @@ type EmployeeImportRow = {
   employeeId: string;
   fullName: string;
   email?: string;
+  center?: string;
   department?: string;
 };
 
@@ -42,18 +43,21 @@ function findSheet(workbook: XLSX.WorkBook, candidates: string[]): string {
   return match ?? workbook.SheetNames[0];
 }
 
-export default function ImportClient() {
-  const [tab, setTab] = useState<"devices" | "employees">("devices");
+export default function ImportClient({ role }: { role: "IT" | "HR" | "FINANCE" }) {
+  const canImportDevices = role === "IT";
+  const [tab, setTab] = useState<"devices" | "employees">(canImportDevices ? "devices" : "employees");
 
   return (
     <div className="space-y-4">
       <div className="flex gap-2 border-b border-slate-200">
-        <button
-          onClick={() => setTab("devices")}
-          className={`px-4 py-2 text-sm font-medium border-b-2 ${tab === "devices" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-800"}`}
-        >
-          Devices
-        </button>
+        {canImportDevices && (
+          <button
+            onClick={() => setTab("devices")}
+            className={`px-4 py-2 text-sm font-medium border-b-2 ${tab === "devices" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-800"}`}
+          >
+            Devices
+          </button>
+        )}
         <button
           onClick={() => setTab("employees")}
           className={`px-4 py-2 text-sm font-medium border-b-2 ${tab === "employees" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-800"}`}
@@ -61,7 +65,7 @@ export default function ImportClient() {
           Employees
         </button>
       </div>
-      {tab === "devices" ? <DeviceImport /> : <EmployeeImport />}
+      {tab === "devices" && canImportDevices ? <DeviceImport /> : <EmployeeImport />}
     </div>
   );
 }
@@ -252,6 +256,7 @@ function EmployeeImport() {
           employeeId: pick(r, ["Employee ID", "EmployeeId"]),
           fullName: pick(r, ["Full Name", "FullName", "Name"]),
           email: pick(r, ["Email"]),
+          center: pick(r, ["Center", "Location"]),
           department: pick(r, ["Department"]),
         }));
         setRows(parsed);
@@ -319,6 +324,7 @@ function EmployeeImport() {
                   <th className="px-2 py-1.5 text-left">Employee ID</th>
                   <th className="px-2 py-1.5 text-left">Full Name</th>
                   <th className="px-2 py-1.5 text-left">Email</th>
+                  <th className="px-2 py-1.5 text-left">Center</th>
                   <th className="px-2 py-1.5 text-left">Department</th>
                   <th className="px-2 py-1.5 text-left">Issue</th>
                 </tr>
@@ -329,6 +335,7 @@ function EmployeeImport() {
                     <td className="px-2 py-1">{r.employeeId || "—"}</td>
                     <td className="px-2 py-1">{r.fullName || "—"}</td>
                     <td className="px-2 py-1">{r.email || "—"}</td>
+                    <td className="px-2 py-1">{r.center || "—"}</td>
                     <td className="px-2 py-1">{r.department || "—"}</td>
                     <td className="px-2 py-1 text-red-600">{rowIssues[i] ?? ""}</td>
                   </tr>

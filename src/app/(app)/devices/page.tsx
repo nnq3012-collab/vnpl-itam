@@ -120,25 +120,26 @@ export default async function DevicesPage({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-slate-900">Device Master</h1>
-        <div className="flex gap-2">
-          <a
-            href={`/api/export/devices?${exportQuery}${exportQuery ? "&" : ""}format=xlsx`}
-            className="rounded-md border border-slate-300 bg-white text-xs font-medium text-slate-900 px-3 py-1.5 hover:bg-slate-50"
-          >
-            Export .xlsx
-          </a>
-          <a
-            href={`/api/export/devices?${exportQuery}${exportQuery ? "&" : ""}format=csv`}
-            className="rounded-md border border-slate-300 bg-white text-xs font-medium text-slate-900 px-3 py-1.5 hover:bg-slate-50"
-          >
-            Export .csv
-          </a>
+      <div className="sticky top-0 z-10 bg-slate-50 pb-2 space-y-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-lg font-semibold text-slate-900">Device Master</h1>
+          <div className="flex gap-2">
+            <a
+              href={`/api/export/devices?${exportQuery}${exportQuery ? "&" : ""}format=xlsx`}
+              className="rounded-md border border-slate-300 bg-white text-xs font-medium text-slate-900 px-3 py-1.5 hover:bg-slate-50"
+            >
+              Export .xlsx
+            </a>
+            <a
+              href={`/api/export/devices?${exportQuery}${exportQuery ? "&" : ""}format=csv`}
+              className="rounded-md border border-slate-300 bg-white text-xs font-medium text-slate-900 px-3 py-1.5 hover:bg-slate-50"
+            >
+              Export .csv
+            </a>
+          </div>
         </div>
-      </div>
 
-      <form className="bg-white rounded-lg shadow p-4 flex flex-wrap gap-3 items-end" method="get">
+        <form className="bg-white rounded-lg shadow p-4 flex flex-wrap gap-3 items-end" method="get">
         <div>
           <label className="block text-xs font-medium text-slate-500 mb-1">Asset ID</label>
           <input
@@ -202,18 +203,20 @@ export default async function DevicesPage({
           <a href="/devices" className="rounded-md border border-slate-300 text-sm font-medium px-4 py-1.5 hover:bg-slate-50">
             Reset
           </a>
-        </div>
-      </form>
-
-      <form method="get" action="/labels" target="_blank" className="bg-white rounded-lg shadow overflow-x-auto">
-        <div className="flex items-center justify-between px-4 py-2 border-b border-slate-100">
-          <span className="text-xs text-slate-400">Select devices to print asset labels for.</span>
           <button
             type="submit"
-            className="rounded-md bg-slate-800 text-white text-xs font-medium px-3 py-1.5 hover:bg-slate-900"
+            form="print-labels-form"
+            className="rounded-md bg-slate-800 text-white text-sm font-medium px-4 py-1.5 hover:bg-slate-900"
           >
             Print Labels
           </button>
+        </div>
+        </form>
+      </div>
+
+      <form id="print-labels-form" method="get" action="/labels" target="_blank" className="bg-white rounded-lg shadow overflow-x-auto">
+        <div className="flex items-center px-4 py-2 border-b border-slate-100">
+          <span className="text-xs text-slate-400">Check devices below, then click &quot;Print Labels&quot; above.</span>
         </div>
         <table className="min-w-full text-sm">
           <thead className="bg-slate-50 text-slate-600 text-xs uppercase">

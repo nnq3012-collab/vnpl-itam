@@ -12,8 +12,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     { href: "/devices", label: "Device Master" },
     ...(session.role === "IT" ? [{ href: "/devices/new", label: "Register Device" }] : []),
     ...(session.role === "IT" || session.role === "HR" ? [{ href: "/devices/update", label: "Update Device" }] : []),
-    ...(session.role === "IT" ? [{ href: "/reference", label: "Reference Lists" }] : []),
-    ...(session.role === "IT" ? [{ href: "/import", label: "Import" }] : []),
+    ...(session.role === "IT" || session.role === "HR" ? [{ href: "/reference", label: "Reference Lists" }] : []),
+    ...(session.role === "IT" || session.role === "HR" ? [{ href: "/import", label: "Import" }] : []),
   ];
 
   return (

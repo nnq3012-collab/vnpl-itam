@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireIT } from "@/lib/api-guard";
+import { requireITorHR } from "@/lib/api-guard";
 
 type ImportRow = {
   employeeId: string;
   fullName: string;
   email?: string;
+  center?: string;
   department?: string;
 };
 
 export async function POST(request: NextRequest) {
-  const guard = await requireIT();
+  const guard = await requireITorHR();
   if ("error" in guard) return guard.error;
 
   const body = await request.json().catch(() => null);
@@ -33,30 +34,45 @@ export async function POST(request: NextRequest) {
     }
 
     const email = row.email?.trim() || null;
+    const centerText = row.center?.trim() || null;
     const departmentText = row.department?.trim() || null;
 
-    // Department names are unique across Centers in this org's Locations
-    // list, so we can resolve the pairing without the file specifying Center.
     let locationId: string | null = null;
-    if (departmentText) {
-      const location = await prisma.location.findFirst({ where: { department: departmentText } });
+
+    if (centerText && departmentText) {
+      // Center + Department both given — exact, unambiguous match.
+      const location = await prisma.location.findUnique({
+        where: { center_department: { center: centerText, department: departmentText } },
+      });
       if (location) {
         locationId = location.id;
       } else {
+        results.unresolvedDepartments.add(`${centerText} / ${departmentText}`);
+      }
+    } else if (departmentText) {
+      // Only Department given — fall back to matching by Department alone,
+      // but only when that Department is unambiguous (exists under exactly
+      // one Center). Otherwise leave unresolved rather than guessing.
+      const matches = await prisma.location.findMany({ where: { department: departmentText } });
+      if (matches.length === 1) {
+        locationId = matches[0].id;
+      } else if (matches.length === 0) {
         results.unresolvedDepartments.add(departmentText);
+      } else {
+        results.unresolvedDepartments.add(`${departmentText} (ambiguous — exists under multiple Centers, add a Center column to resolve)`);
       }
     }
 
     const existing = await prisma.employee.findUnique({ where: { employeeId } });
     if (existing) {
-      // Name/Email/location are refreshed from the file; Status is
-      // deliberately left untouched so HR's Active/Resigned/Transferred
-      // flags survive re-imports of a stale roster export. If the
-      // department can't be resolved, leave the existing location alone
-      // rather than blanking it.
+      // Name/Email are refreshed from the file; Status is deliberately left
+      // untouched so HR's Active/Resigned/Transferred flags survive
+      // re-imports of a stale roster export. Location is only overwritten
+      // when this row resolved to a valid one — a blank/unresolved location
+      // in the file never wipes an employee's existing location.
       await prisma.employee.update({
         where: { employeeId },
-        data: { fullName, email, ...(locationId || !departmentText ? { locationId } : {}) },
+        data: { fullName, email, ...(locationId ? { locationId } : {}) },
       });
       results.updated++;
     } else {

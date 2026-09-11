@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Combobox from "../combobox";
 
@@ -45,6 +45,22 @@ export default function RegisterDeviceForm({
   );
   const selectedEmployee = employees.find((e) => e.id === assignedUserId) ?? null;
   const selectedDeviceType = deviceTypes.find((t) => t.id === deviceTypeId) ?? null;
+
+  const [suggestedId, setSuggestedId] = useState<string | null>(null);
+  useEffect(() => {
+    setSuggestedId(null);
+    if (!deviceTypeId) return;
+    let cancelled = false;
+    fetch(`/api/devices/suggest-asset-id?deviceTypeId=${encodeURIComponent(deviceTypeId)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled) setSuggestedId(data.suggestedId ?? null);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [deviceTypeId]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -106,6 +122,18 @@ export default function RegisterDeviceForm({
           className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
           required
         />
+        {suggestedId && (
+          <p className="text-xs text-slate-500 mt-1">
+            Next available for this type:{" "}
+            <button
+              type="button"
+              onClick={() => setAssetId(suggestedId)}
+              className="text-blue-600 hover:underline font-medium"
+            >
+              {suggestedId}
+            </button>
+          </p>
+        )}
       </div>
 
       <div>

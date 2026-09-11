@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { requireIT } from "@/lib/api-guard";
+import { requireITorHR } from "@/lib/api-guard";
 import * as XLSX from "xlsx";
 
 export async function GET() {
-  const guard = await requireIT();
+  const guard = await requireITorHR();
   if ("error" in guard) return guard.error;
 
   const rows = [
@@ -11,6 +11,7 @@ export async function GET() {
       "Employee ID": "EMP999",
       "Full Name": "Nguyen Van Vi Du",
       Email: "vidu.nguyen@vnpost.vn",
+      Center: "Back Office",
       Department: "Phòng Công nghệ và Đổi mới sáng tạo",
     },
   ];
