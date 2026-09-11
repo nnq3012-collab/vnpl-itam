@@ -4,7 +4,7 @@ import { DeviceStatus, Prisma, Role } from "@prisma/client";
 import { getSession } from "@/lib/session";
 import { canDeleteDevices } from "@/lib/rbac";
 import SelectAllCheckbox from "./select-all";
-import DeleteDeviceButton from "./delete-button";
+import BulkDeleteButton from "./bulk-delete-button";
 
 const STATUS_LABELS: Record<DeviceStatus, string> = {
   IN_STOCK: "In Stock",
@@ -210,6 +210,7 @@ export default async function DevicesPage({
           >
             Print Labels
           </button>
+          {canDelete && <BulkDeleteButton />}
         </div>
         </form>
       </div>
@@ -236,7 +237,6 @@ export default async function DevicesPage({
               <th className="px-4 py-2 text-left">Assigned Email</th>
               <th className="px-4 py-2 text-left">Date Registered</th>
               <th className="px-4 py-2 text-left">{sortLink("lastUpdated", "Last Updated")}</th>
-              {canDelete && <th className="px-4 py-2 text-left">Actions</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -271,16 +271,11 @@ export default async function DevicesPage({
                 <td className="px-4 py-2 text-slate-600">{d.assignedUserEmail ?? "—"}</td>
                 <td className="px-4 py-2 text-slate-500">{d.dateRegistered.toLocaleDateString()}</td>
                 <td className="px-4 py-2 text-slate-500">{d.lastUpdated.toLocaleDateString()}</td>
-                {canDelete && (
-                  <td className="px-4 py-2">
-                    <DeleteDeviceButton assetId={d.assetId} />
-                  </td>
-                )}
               </tr>
             ))}
             {devices.length === 0 && (
               <tr>
-                <td colSpan={canDelete ? 16 : 15} className="px-4 py-8 text-center text-slate-400">
+                <td colSpan={15} className="px-4 py-8 text-center text-slate-400">
                   No devices match the current filters.
                 </td>
               </tr>
