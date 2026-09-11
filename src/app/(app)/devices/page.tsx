@@ -35,6 +35,7 @@ type SearchParams = {
   assignedUserId?: string;
   sort?: string;
   dir?: string;
+  highlight?: string;
 };
 
 function buildOrderBy(sort?: string, dir?: string): Prisma.DeviceOrderByWithRelationInput {
@@ -84,7 +85,7 @@ export default async function DevicesPage({
   const [devices, deviceTypes, locations, employees] = await Promise.all([
     prisma.device.findMany({
       where,
-      include: { deviceType: true, location: true, assignedUser: true },
+      include: { deviceType: true, location: true, assignedUser: true, vendor: true },
       orderBy: buildOrderBy(params.sort, params.dir),
     }),
     prisma.deviceType.findMany({ orderBy: { name: "asc" } }),
@@ -94,6 +95,27 @@ export default async function DevicesPage({
 
   const centers = Array.from(new Set(locations.map((l) => l.center))).sort();
   const departments = Array.from(new Set(locations.map((l) => l.department))).sort();
+
+  const currentYear = new Date().getFullYear();
+  function depreciationInfo(d: (typeof devices)[number]) {
+    const months = d.deviceType.depreciationMonths;
+    const price = d.price != null ? Number(d.price) : null;
+    if (months == null || price == null || d.purchaseYear == null) return null;
+    const monthsElapsed = Math.max(0, (currentYear - d.purchaseYear) * 12);
+    const fullyDepreciated = monthsElapsed >= months;
+    const remainingValue = fullyDepreciated ? 0 : price * (1 - monthsElapsed / months);
+    return { remainingValue, fullyDepreciated };
+  }
+
+  const creationLogs = await prisma.auditLog.findMany({
+    where: { assetId: { in: devices.map((d) => d.assetId) } },
+    orderBy: { timestamp: "asc" },
+    select: { assetId: true, operator: true },
+  });
+  const createdByAssetId = new Map<string, string>();
+  for (const log of creationLogs) {
+    if (!createdByAssetId.has(log.assetId)) createdByAssetId.set(log.assetId, log.operator);
+  }
 
   function sortLink(field: string, label: string) {
     const nextDir = params.sort === field && params.dir !== "desc" ? "desc" : "asc";
@@ -235,23 +257,38 @@ export default async function DevicesPage({
               <th className="px-4 py-2 text-left">Department</th>
               <th className="px-4 py-2 text-left">{sortLink("assignedUser", "Assigned User")}</th>
               <th className="px-4 py-2 text-left">Assigned Email</th>
+              <th className="px-4 py-2 text-left">Vendor</th>
+              <th className="px-4 py-2 text-left">Price</th>
+              <th className="px-4 py-2 text-left">Purchase Year</th>
+              <th className="px-4 py-2 text-left">Remaining Value</th>
               <th className="px-4 py-2 text-left">Date Registered</th>
               <th className="px-4 py-2 text-left">{sortLink("lastUpdated", "Last Updated")}</th>
+              <th className="px-4 py-2 text-left">Created By</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {devices.map((d) => (
-              <tr key={d.id} className="hover:bg-slate-50">
+            {devices.map((d) => {
+              const depreciation = depreciationInfo(d);
+              return (
+              <tr
+                key={d.id}
+                id={`row-${d.assetId}`}
+                className={`hover:bg-slate-50 ${params.highlight === d.assetId ? "bg-amber-50" : ""}`}
+              >
                 <td className="px-4 py-2">
                   <input type="checkbox" name="assetId" value={d.assetId} className="h-4 w-4 rounded border-slate-300" />
                 </td>
                 <td className="px-4 py-2 font-medium text-slate-900">
-                  {canEdit ? (
-                    <Link href={`/devices/update?assetId=${encodeURIComponent(d.assetId)}`} className="text-blue-600 hover:underline">
-                      {d.assetId}
+                  <Link href={`/devices/${encodeURIComponent(d.assetId)}`} className="text-blue-600 hover:underline">
+                    {d.assetId}
+                  </Link>
+                  {canEdit && (
+                    <Link
+                      href={`/devices/update?assetId=${encodeURIComponent(d.assetId)}`}
+                      className="ml-2 text-xs text-slate-400 hover:text-slate-700"
+                    >
+                      Edit
                     </Link>
-                  ) : (
-                    d.assetId
                   )}
                 </td>
                 <td className="px-4 py-2 text-slate-900">{d.deviceType.name}</td>
@@ -269,13 +306,31 @@ export default async function DevicesPage({
                 <td className="px-4 py-2 text-slate-600">{d.location.department}</td>
                 <td className="px-4 py-2 text-slate-600">{d.assignedUser?.fullName ?? "Unassigned"}</td>
                 <td className="px-4 py-2 text-slate-600">{d.assignedUserEmail ?? "—"}</td>
+                <td className="px-4 py-2 text-slate-600">{d.vendor?.name ?? "—"}</td>
+                <td className="px-4 py-2 text-slate-600">{d.price != null ? Number(d.price).toLocaleString() : "—"}</td>
+                <td className="px-4 py-2 text-slate-600">{d.purchaseYear ?? "—"}</td>
+                <td className="px-4 py-2">
+                  {depreciation ? (
+                    depreciation.fullyDepreciated ? (
+                      <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-red-50 text-red-700">
+                        Fully depreciated
+                      </span>
+                    ) : (
+                      <span className="text-slate-600">{depreciation.remainingValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                    )
+                  ) : (
+                    <span className="text-slate-400">—</span>
+                  )}
+                </td>
                 <td className="px-4 py-2 text-slate-500">{d.dateRegistered.toLocaleDateString()}</td>
                 <td className="px-4 py-2 text-slate-500">{d.lastUpdated.toLocaleDateString()}</td>
+                <td className="px-4 py-2 text-slate-600">{createdByAssetId.get(d.assetId) ?? "—"}</td>
               </tr>
-            ))}
+              );
+            })}
             {devices.length === 0 && (
               <tr>
-                <td colSpan={15} className="px-4 py-8 text-center text-slate-400">
+                <td colSpan={20} className="px-4 py-8 text-center text-slate-400">
                   No devices match the current filters.
                 </td>
               </tr>

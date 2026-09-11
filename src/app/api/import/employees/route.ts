@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireITorHR } from "@/lib/api-guard";
+import { requireFeature } from "@/lib/api-guard";
 
 type ImportRow = {
   employeeId: string;
@@ -11,7 +11,7 @@ type ImportRow = {
 };
 
 export async function POST(request: NextRequest) {
-  const guard = await requireITorHR();
+  const guard = await requireFeature("import.employees");
   if ("error" in guard) return guard.error;
 
   const body = await request.json().catch(() => null);

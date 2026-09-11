@@ -1,27 +1,38 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getSession } from "@/lib/session";
-import { Role } from "@prisma/client";
+import { canUseFeature } from "@/lib/feature-access";
 
 export default async function ReferenceIndexPage() {
   const session = await getSession();
   if (!session) redirect("/login");
-  if (session.role !== Role.IT && session.role !== Role.HR) {
+
+  const [canManageTypesAndVendors, canManageEmployeesAndLocations] = await Promise.all([
+    canUseFeature(session.role, "reference.deviceTypesAndVendors"),
+    canUseFeature(session.role, "reference.employeesAndLocations"),
+  ]);
+
+  if (!canManageTypesAndVendors && !canManageEmployeesAndLocations) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
-        <p className="text-sm text-red-600">
-          Reference list management is restricted to IT and HR.
-        </p>
+        <p className="text-sm text-red-600">You do not have permission to manage reference lists.</p>
       </div>
     );
   }
 
   const links = [
-    ...(session.role === Role.IT
-      ? [{ href: "/reference/device-types", label: "Device Types", desc: "Editable list of device categories (Laptop, PC, Monitor, ...) and whether they show CPU/RAM/Storage fields. IT only." }]
+    ...(canManageTypesAndVendors
+      ? [
+          { href: "/reference/device-types", label: "Device Types", desc: "Editable list of device categories (Laptop, PC, Monitor, ...), whether they show CPU/RAM/Storage fields, and their depreciation period." },
+          { href: "/reference/vendors", label: "Vendors", desc: "Editable list of vendors/suppliers used on Device Master." },
+        ]
       : []),
-    { href: "/reference/locations", label: "Locations", desc: "Center / Department pairs used across the app." },
-    { href: "/reference/employees", label: "Employees", desc: "Employee directory used for device assignment." },
+    ...(canManageEmployeesAndLocations
+      ? [
+          { href: "/reference/locations", label: "Locations", desc: "Center / Department pairs used across the app." },
+          { href: "/reference/employees", label: "Employees", desc: "Employee directory used for device assignment." },
+        ]
+      : []),
   ];
 
   return (

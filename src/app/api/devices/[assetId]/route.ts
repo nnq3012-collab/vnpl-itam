@@ -21,6 +21,9 @@ const IT_ONLY_FIELDS = [
   "status",
   "center",
   "department",
+  "vendorId",
+  "price",
+  "purchaseYear",
 ] as const;
 
 export async function DELETE(
@@ -66,7 +69,7 @@ export async function GET(
   const { assetId } = await params;
   const device = await prisma.device.findUnique({
     where: { assetId },
-    include: { deviceType: true, location: true, assignedUser: true },
+    include: { deviceType: true, location: true, assignedUser: true, vendor: true },
   });
   if (!device) return NextResponse.json({ error: "Device not found" }, { status: 404 });
 
@@ -86,7 +89,7 @@ export async function PUT(
   const { assetId } = await params;
   const device = await prisma.device.findUnique({
     where: { assetId },
-    include: { deviceType: true, location: true, assignedUser: true },
+    include: { deviceType: true, location: true, assignedUser: true, vendor: true },
   });
   if (!device) return NextResponse.json({ error: "Device not found" }, { status: 404 });
 
@@ -164,6 +167,34 @@ export async function PUT(
       deviceUpdate.status = body.status;
       changes.push(`Status: ${device.status} → ${body.status}`);
     }
+    if ("vendorId" in body) {
+      const newVendorId: string | null = body.vendorId || null;
+      if (newVendorId !== device.vendorId) {
+        let newVendorName = "—";
+        if (newVendorId) {
+          const vendor = await prisma.vendor.findUnique({ where: { id: newVendorId } });
+          if (!vendor) return NextResponse.json({ error: "Invalid Vendor" }, { status: 400 });
+          newVendorName = vendor.name;
+        }
+        deviceUpdate.vendorId = newVendorId;
+        changes.push(`Vendor: ${device.vendor?.name ?? "—"} → ${newVendorName}`);
+      }
+    }
+    if ("price" in body) {
+      const newPrice = typeof body.price === "number" && body.price >= 0 ? body.price : null;
+      if (newPrice !== (device.price ? Number(device.price) : null)) {
+        deviceUpdate.price = newPrice;
+        changes.push(`Price: ${device.price ?? "—"} → ${newPrice ?? "—"}`);
+      }
+    }
+    if ("purchaseYear" in body) {
+      const newPurchaseYear =
+        typeof body.purchaseYear === "number" && Number.isInteger(body.purchaseYear) ? body.purchaseYear : null;
+      if (newPurchaseYear !== device.purchaseYear) {
+        deviceUpdate.purchaseYear = newPurchaseYear;
+        changes.push(`Purchase Year: ${device.purchaseYear ?? "—"} → ${newPurchaseYear ?? "—"}`);
+      }
+    }
   }
 
   // --- Assigned User (IT + HR) ---
@@ -181,7 +212,15 @@ export async function PUT(
       }
       deviceUpdate.assignedUserId = newAssignedUserId;
       deviceUpdate.assignedUserEmail = newEmail;
-      changes.push(`Assigned User: ${device.assignedUser?.fullName ?? "Unassigned"} → ${newEmployeeName}`);
+      const wasAssigned = !!device.assignedUserId;
+      const isNowAssigned = !!newAssignedUserId;
+      if (!wasAssigned && isNowAssigned) {
+        changes.push(`Allocation: Unassigned → ${newEmployeeName}`);
+      } else if (wasAssigned && !isNowAssigned) {
+        changes.push(`Return: ${device.assignedUser?.fullName ?? "Unassigned"} → Unassigned`);
+      } else {
+        changes.push(`Reassignment: ${device.assignedUser?.fullName ?? "Unassigned"} → ${newEmployeeName}`);
+      }
       assignedUserChanged = true;
     }
   }
@@ -220,7 +259,7 @@ export async function PUT(
       ? await prisma.device.update({
           where: { id: device.id },
           data: deviceUpdate,
-          include: { deviceType: true, location: true, assignedUser: true },
+          include: { deviceType: true, location: true, assignedUser: true, vendor: true },
         })
       : device;
 

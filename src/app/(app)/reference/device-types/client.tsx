@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 
-type DeviceType = { id: string; name: string; hasSpecs: boolean };
+type DeviceType = { id: string; name: string; hasSpecs: boolean; depreciationMonths: number | null };
 
 export default function DeviceTypesClient({ initial }: { initial: DeviceType[] }) {
   const [items, setItems] = useState(initial);
   const [newName, setNewName] = useState("");
   const [newHasSpecs, setNewHasSpecs] = useState(false);
+  const [newDepreciationMonths, setNewDepreciationMonths] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -18,13 +19,18 @@ export default function DeviceTypesClient({ initial }: { initial: DeviceType[] }
     const res = await fetch("/api/reference/device-types", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newName.trim(), hasSpecs: newHasSpecs }),
+      body: JSON.stringify({
+        name: newName.trim(),
+        hasSpecs: newHasSpecs,
+        depreciationMonths: newDepreciationMonths ? Number(newDepreciationMonths) : null,
+      }),
     });
     const data = await res.json();
     if (!res.ok) return setError(data.error);
     setItems((prev) => [...prev, data.deviceType].sort((a, b) => a.name.localeCompare(b.name)));
     setNewName("");
     setNewHasSpecs(false);
+    setNewDepreciationMonths("");
   }
 
   async function toggleHasSpecs(item: DeviceType) {
@@ -32,7 +38,20 @@ export default function DeviceTypesClient({ initial }: { initial: DeviceType[] }
     const res = await fetch(`/api/reference/device-types/${item.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: item.name, hasSpecs: !item.hasSpecs }),
+      body: JSON.stringify({ name: item.name, hasSpecs: !item.hasSpecs, depreciationMonths: item.depreciationMonths }),
+    });
+    const data = await res.json();
+    if (!res.ok) return setError(data.error);
+    setItems((prev) => prev.map((i) => (i.id === item.id ? data.deviceType : i)));
+  }
+
+  async function saveDepreciationMonths(item: DeviceType, value: string) {
+    setError(null);
+    const depreciationMonths = value ? Number(value) : null;
+    const res = await fetch(`/api/reference/device-types/${item.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: item.name, hasSpecs: item.hasSpecs, depreciationMonths }),
     });
     const data = await res.json();
     if (!res.ok) return setError(data.error);
@@ -44,7 +63,7 @@ export default function DeviceTypesClient({ initial }: { initial: DeviceType[] }
     const res = await fetch(`/api/reference/device-types/${item.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: editingName.trim(), hasSpecs: item.hasSpecs }),
+      body: JSON.stringify({ name: editingName.trim(), hasSpecs: item.hasSpecs, depreciationMonths: item.depreciationMonths }),
     });
     const data = await res.json();
     if (!res.ok) return setError(data.error);
@@ -70,6 +89,7 @@ export default function DeviceTypesClient({ initial }: { initial: DeviceType[] }
           <tr>
             <th className="text-left pb-2">Name</th>
             <th className="text-left pb-2">Shows CPU/RAM/Storage fields</th>
+            <th className="text-left pb-2">Depreciation (months)</th>
             <th className="pb-2"></th>
           </tr>
         </thead>
@@ -109,6 +129,16 @@ export default function DeviceTypesClient({ initial }: { initial: DeviceType[] }
                   <span className="text-xs text-slate-500">{item.hasSpecs ? "Yes" : "No"}</span>
                 </label>
               </td>
+              <td className="py-2">
+                <input
+                  type="number"
+                  min={1}
+                  defaultValue={item.depreciationMonths ?? ""}
+                  onBlur={(e) => saveDepreciationMonths(item, e.target.value)}
+                  placeholder="Not set"
+                  className="w-24 rounded-md border border-slate-300 px-2 py-1 text-sm"
+                />
+              </td>
               <td className="py-2 text-right">
                 <button onClick={() => handleDelete(item)} className="text-xs text-red-500 hover:text-red-700">
                   Delete
@@ -140,6 +170,17 @@ export default function DeviceTypesClient({ initial }: { initial: DeviceType[] }
           />
           <span className="text-xs text-slate-600">Has CPU/RAM/Storage</span>
         </label>
+        <div>
+          <label className="block text-xs font-medium text-slate-500 mb-1">Depreciation (months)</label>
+          <input
+            type="number"
+            min={1}
+            value={newDepreciationMonths}
+            onChange={(e) => setNewDepreciationMonths(e.target.value)}
+            placeholder="e.g. 36"
+            className="w-24 rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+          />
+        </div>
         <button type="submit" className="rounded-md bg-blue-600 text-white text-sm font-medium px-4 py-1.5 hover:bg-blue-700">
           Add
         </button>

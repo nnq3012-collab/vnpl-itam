@@ -22,14 +22,15 @@ export default async function UpdateDevicePage({
     );
   }
 
-  const [devices, deviceTypes, locations, employees] = await Promise.all([
+  const [devices, deviceTypes, locations, employees, vendors] = await Promise.all([
     prisma.device.findMany({
-      include: { deviceType: true, location: true, assignedUser: true },
+      include: { deviceType: true, location: true, assignedUser: true, vendor: true },
       orderBy: { assetId: "asc" },
     }),
     prisma.deviceType.findMany({ orderBy: { name: "asc" } }),
     prisma.location.findMany({ orderBy: [{ center: "asc" }, { department: "asc" }] }),
     prisma.employee.findMany({ orderBy: { fullName: "asc" } }),
+    prisma.vendor.findMany({ orderBy: { name: "asc" } }),
   ]);
 
   return (
@@ -55,10 +56,14 @@ export default async function UpdateDevicePage({
           assignedUserName: d.assignedUser?.fullName ?? null,
           assignedUserEmail: d.assignedUserEmail,
           assignedUserStatus: d.assignedUser?.status ?? null,
+          vendorId: d.vendorId,
+          price: d.price ? Number(d.price) : null,
+          purchaseYear: d.purchaseYear,
         }))}
         deviceTypes={deviceTypes.map((t) => ({ id: t.id, name: t.name, hasSpecs: t.hasSpecs }))}
         locations={locations.map((l) => ({ id: l.id, center: l.center, department: l.department }))}
         employees={employees.map((e) => ({ id: e.id, fullName: e.fullName, email: e.email, employeeId: e.employeeId, status: e.status }))}
+        vendors={vendors.map((v) => ({ id: v.id, name: v.name }))}
       />
     </div>
   );

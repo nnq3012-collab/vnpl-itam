@@ -1,19 +1,34 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getSession } from "@/lib/session";
+import { canUseFeature } from "@/lib/feature-access";
+import { canConfigureFeatures } from "@/lib/rbac";
 import LogoutButton from "./logout-button";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
   if (!session) redirect("/login");
 
+  const [canRegister, canManageTypesAndVendors, canManageEmployeesAndLocations, canImportAnything] = await Promise.all([
+    canUseFeature(session.role, "devices.register"),
+    canUseFeature(session.role, "reference.deviceTypesAndVendors"),
+    canUseFeature(session.role, "reference.employeesAndLocations"),
+    Promise.all([
+      canUseFeature(session.role, "import.devices"),
+      canUseFeature(session.role, "import.employees"),
+    ]).then(([a, b]) => a || b),
+  ]);
+  const canConfigure = canConfigureFeatures(session.username);
+
   const navItems = [
     { href: "/dashboard", label: "Dashboard" },
     { href: "/devices", label: "Device Master" },
-    ...(session.role === "IT" ? [{ href: "/devices/new", label: "Register Device" }] : []),
+    { href: "/logs/allocation", label: "Allocation & Return Log" },
+    ...(canRegister ? [{ href: "/devices/new", label: "Register Device" }] : []),
     ...(session.role === "IT" || session.role === "HR" ? [{ href: "/devices/update", label: "Update Device" }] : []),
-    ...(session.role === "IT" || session.role === "HR" ? [{ href: "/reference", label: "Reference Lists" }] : []),
-    ...(session.role === "IT" || session.role === "HR" ? [{ href: "/import", label: "Import" }] : []),
+    ...(canManageTypesAndVendors || canManageEmployeesAndLocations ? [{ href: "/reference", label: "Reference Lists" }] : []),
+    ...(canImportAnything ? [{ href: "/import", label: "Import" }] : []),
+    ...(canConfigure ? [{ href: "/configuration", label: "Configuration" }] : []),
   ];
 
   return (

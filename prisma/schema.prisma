@@ -39,6 +39,7 @@ enum AuditAction {
   REASSIGNMENT
   HARDWARE_CHANGE
   BULK_IMPORT
+  MAINTENANCE
 }
 
 model User {
@@ -77,6 +78,21 @@ model Employee {
   @@index([locationId])
 }
 
+// Lets it_admin reassign, per feature, which roles may use it — without a
+// deploy. Missing rows fall back to the hardcoded defaults in
+// src/lib/features.ts, so the app behaves identically until someone edits
+// the Configuration tab.
+model FeaturePermission {
+  key   String @id
+  roles Role[]
+}
+
+model Vendor {
+  id      String   @id @default(cuid())
+  name    String   @unique
+  devices Device[]
+}
+
 model DeviceType {
   id       String   @id @default(cuid())
   name     String   @unique
@@ -84,6 +100,9 @@ model DeviceType {
   // this type (e.g. Laptop, PC) — hidden for types where specs don't apply
   // (Monitor, Scanner, Mobile Device).
   hasSpecs Boolean  @default(false)
+  // Depreciation period for devices of this type, in months. Null means no
+  // depreciation schedule is configured yet for this type.
+  depreciationMonths Int?
   devices  Device[]
 }
 
@@ -106,12 +125,17 @@ model Device {
   // deliberately does not update if the employee's email changes later.
   // Only set when assignedUserId is set; null when unassigned.
   assignedUserEmail  String?
+  price              Decimal?     @db.Decimal(12, 2)
+  purchaseYear       Int?
+  vendor             Vendor?      @relation(fields: [vendorId], references: [id])
+  vendorId           String?
   dateRegistered     DateTime     @default(now())
   lastUpdated        DateTime     @updatedAt
 
   @@index([status])
   @@index([locationId])
   @@index([assignedUserId])
+  @@index([vendorId])
 }
 
 // Immutable history. AssetId/operator are plain strings (not FKs) so entries

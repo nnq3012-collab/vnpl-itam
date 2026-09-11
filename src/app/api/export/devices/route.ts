@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
 
   const devices = await prisma.device.findMany({
     where,
-    include: { deviceType: true, location: true, assignedUser: true },
+    include: { deviceType: true, location: true, assignedUser: true, vendor: true },
     orderBy: { assetId: "asc" },
   });
 
@@ -56,6 +56,9 @@ export async function GET(request: NextRequest) {
     Department: d.location.department,
     "Assigned User": d.assignedUser?.fullName ?? "Unassigned",
     "Assigned Email": d.assignedUserEmail ?? "",
+    Vendor: d.vendor?.name ?? "",
+    Price: d.price != null ? Number(d.price) : "",
+    "Purchase Year": d.purchaseYear ?? "",
     "Date Registered": d.dateRegistered.toISOString().slice(0, 10),
     "Last Updated": d.lastUpdated.toISOString().slice(0, 10),
   }));

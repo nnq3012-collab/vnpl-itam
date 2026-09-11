@@ -7,15 +7,18 @@ import Combobox from "../combobox";
 type DeviceType = { id: string; name: string; hasSpecs: boolean };
 type Location = { id: string; center: string; department: string };
 type Employee = { id: string; fullName: string; email: string | null; employeeId: string };
+type Vendor = { id: string; name: string };
 
 export default function RegisterDeviceForm({
   deviceTypes,
   locations,
   employees,
+  vendors,
 }: {
   deviceTypes: DeviceType[];
   locations: Location[];
   employees: Employee[];
+  vendors: Vendor[];
 }) {
   const router = useRouter();
 
@@ -29,6 +32,9 @@ export default function RegisterDeviceForm({
   const [center, setCenter] = useState("");
   const [department, setDepartment] = useState("");
   const [assignedUserId, setAssignedUserId] = useState<string | null>(null);
+  const [vendorId, setVendorId] = useState("");
+  const [price, setPrice] = useState("");
+  const [purchaseYear, setPurchaseYear] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -83,6 +89,9 @@ export default function RegisterDeviceForm({
           center,
           department,
           assignedUserId,
+          vendorId: vendorId || null,
+          price: price ? Number(price) : null,
+          purchaseYear: purchaseYear ? Number(purchaseYear) : null,
         }),
       });
       const data = await res.json();
@@ -103,6 +112,9 @@ export default function RegisterDeviceForm({
       setCenter("");
       setDepartment("");
       setAssignedUserId(null);
+      setVendorId("");
+      setPrice("");
+      setPurchaseYear("");
       router.refresh();
     } catch {
       setError("Something went wrong. Please try again.");
@@ -259,6 +271,44 @@ export default function RegisterDeviceForm({
           readOnly
           className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500"
         />
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Vendor</label>
+          <select
+            value={vendorId}
+            onChange={(e) => setVendorId(e.target.value)}
+            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          >
+            <option value="">Select...</option>
+            {vendors.map((v) => (
+              <option key={v.id} value={v.id}>{v.name}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Price</label>
+          <input
+            type="number"
+            min={0}
+            step="0.01"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Purchase Year</label>
+          <input
+            type="number"
+            min={2000}
+            max={2100}
+            value={purchaseYear}
+            onChange={(e) => setPurchaseYear(e.target.value)}
+            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          />
+        </div>
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}

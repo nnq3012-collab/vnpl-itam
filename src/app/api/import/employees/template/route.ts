@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { requireITorHR } from "@/lib/api-guard";
+import { requireFeature } from "@/lib/api-guard";
 import * as XLSX from "xlsx";
 
 export async function GET() {
-  const guard = await requireITorHR();
+  const guard = await requireFeature("import.employees");
   if ("error" in guard) return guard.error;
 
   const rows = [

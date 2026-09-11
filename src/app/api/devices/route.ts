@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/session";
-import { canManageDevices } from "@/lib/rbac";
+import { requireFeature } from "@/lib/api-guard";
 import { AuditAction, DeviceStatus } from "@prisma/client";
 
 export async function POST(request: NextRequest) {
-  const session = await getSession();
-  if (!session || !canManageDevices(session.role)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const guard = await requireFeature("devices.register");
+  if ("error" in guard) return guard.error;
+  const { session } = guard;
 
   const body = await request.json().catch(() => null);
   const assetId = typeof body?.assetId === "string" ? body.assetId.trim() : "";
@@ -21,6 +19,10 @@ export async function POST(request: NextRequest) {
   const center = typeof body?.center === "string" ? body.center.trim() : "";
   const department = typeof body?.department === "string" ? body.department.trim() : "";
   const assignedUserId = typeof body?.assignedUserId === "string" && body.assignedUserId ? body.assignedUserId : null;
+  const vendorId = typeof body?.vendorId === "string" && body.vendorId ? body.vendorId : null;
+  const price = typeof body?.price === "number" && body.price >= 0 ? body.price : null;
+  const purchaseYear =
+    typeof body?.purchaseYear === "number" && Number.isInteger(body.purchaseYear) ? body.purchaseYear : null;
 
   if (!assetId || !deviceTypeId || !center || !department) {
     return NextResponse.json(
@@ -58,6 +60,13 @@ export async function POST(request: NextRequest) {
     assignedUserEmail = employee.email;
   }
 
+  if (vendorId) {
+    const vendor = await prisma.vendor.findUnique({ where: { id: vendorId } });
+    if (!vendor) {
+      return NextResponse.json({ error: "Invalid Vendor" }, { status: 400 });
+    }
+  }
+
   const device = await prisma.device.create({
     data: {
       assetId,
@@ -71,6 +80,9 @@ export async function POST(request: NextRequest) {
       locationId: location.id,
       assignedUserId,
       assignedUserEmail,
+      vendorId,
+      price,
+      purchaseYear,
     },
     include: { deviceType: true, location: true, assignedUser: true },
   });

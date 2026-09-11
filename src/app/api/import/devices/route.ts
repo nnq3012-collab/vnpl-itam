@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireIT } from "@/lib/api-guard";
+import { requireFeature } from "@/lib/api-guard";
 import { AuditAction } from "@prisma/client";
 import { normalizeStatus } from "@/lib/import-helpers";
 
@@ -20,7 +20,7 @@ type ImportRow = {
 };
 
 export async function POST(request: NextRequest) {
-  const guard = await requireIT();
+  const guard = await requireFeature("import.devices");
   if ("error" in guard) return guard.error;
 
   const body = await request.json().catch(() => null);

@@ -21,10 +21,14 @@ type DeviceRow = {
   assignedUserName: string | null;
   assignedUserEmail: string | null;
   assignedUserStatus: string | null;
+  vendorId: string | null;
+  price: number | null;
+  purchaseYear: number | null;
 };
 type DeviceType = { id: string; name: string; hasSpecs: boolean };
 type Location = { id: string; center: string; department: string };
 type Employee = { id: string; fullName: string; email: string | null; employeeId: string; status: string };
+type Vendor = { id: string; name: string };
 
 const STATUS_OPTIONS = ["IN_STOCK", "DEPLOYED", "IN_REPAIR", "LOST", "STOLEN", "BROKEN", "RETIRED"];
 const REASON_REQUIRED = new Set(["LOST", "STOLEN", "BROKEN", "RETIRED"]);
@@ -36,6 +40,7 @@ export default function UpdateDeviceClient({
   deviceTypes,
   locations,
   employees,
+  vendors,
   initialAssetId,
 }: {
   role: "IT" | "HR" | "FINANCE";
@@ -43,6 +48,7 @@ export default function UpdateDeviceClient({
   deviceTypes: DeviceType[];
   locations: Location[];
   employees: Employee[];
+  vendors: Vendor[];
   initialAssetId?: string;
 }) {
   const router = useRouter();
@@ -80,10 +86,10 @@ export default function UpdateDeviceClient({
       deviceTypes={deviceTypes}
       locations={locations}
       employees={employees}
+      vendors={vendors}
       onBack={() => setSelectedAssetDeviceId(null)}
       onSaved={() => {
-        router.refresh();
-        setSelectedAssetDeviceId(null);
+        router.push(`/devices?highlight=${encodeURIComponent(device.assetId)}#row-${encodeURIComponent(device.assetId)}`);
       }}
     />
   );
@@ -95,6 +101,7 @@ function EditForm({
   deviceTypes,
   locations,
   employees,
+  vendors,
   onBack,
   onSaved,
 }: {
@@ -103,6 +110,7 @@ function EditForm({
   deviceTypes: DeviceType[];
   locations: Location[];
   employees: Employee[];
+  vendors: Vendor[];
   onBack: () => void;
   onSaved: () => void;
 }) {
@@ -117,6 +125,9 @@ function EditForm({
   const [status, setStatus] = useState(device.status);
   const [center, setCenter] = useState(device.center);
   const [department, setDepartment] = useState(device.department);
+  const [vendorId, setVendorId] = useState(device.vendorId ?? "");
+  const [price, setPrice] = useState(device.price?.toString() ?? "");
+  const [purchaseYear, setPurchaseYear] = useState(device.purchaseYear?.toString() ?? "");
   const [reason, setReason] = useState("");
   const [assignedUserId, setAssignedUserId] = useState<string | null>(device.assignedUserId);
   const [employeeStatus, setEmployeeStatus] = useState<string>(device.assignedUserStatus ?? "");
@@ -154,6 +165,9 @@ function EditForm({
       payload.status = status;
       payload.center = center;
       payload.department = department;
+      payload.vendorId = vendorId || null;
+      payload.price = price ? Number(price) : null;
+      payload.purchaseYear = purchaseYear ? Number(purchaseYear) : null;
       if (reason) payload.reason = reason;
     }
     payload.assignedUserId = assignedUserId;
@@ -308,6 +322,47 @@ function EditForm({
             {!isIT && <option value={department}>{department}</option>}
             {isIT && departmentsForCenter.map((d) => <option key={d} value={d}>{d}</option>)}
           </select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Vendor</label>
+          <select
+            value={vendorId}
+            onChange={(e) => setVendorId(e.target.value)}
+            disabled={!isIT}
+            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500"
+          >
+            <option value="">Select...</option>
+            {vendors.map((v) => (
+              <option key={v.id} value={v.id}>{v.name}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Price</label>
+          <input
+            type="number"
+            min={0}
+            step="0.01"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            disabled={!isIT}
+            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Purchase Year</label>
+          <input
+            type="number"
+            min={2000}
+            max={2100}
+            value={purchaseYear}
+            onChange={(e) => setPurchaseYear(e.target.value)}
+            disabled={!isIT}
+            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500"
+          />
         </div>
       </div>
 

@@ -5,13 +5,6 @@ import type { SessionPayload } from "./session";
  * relevant check before touching the database — UI-level hiding is not
  * sufficient on its own. */
 
-export function canManageDevices(role: Role): boolean {
-  return role === "IT";
-}
-
-export function canManageReferenceLists(role: Role): boolean {
-  return role === "IT";
-}
 
 /** HR may update only assignedUserId/assignedUserEmail on a Device, plus an
  * Employee's status field. */
@@ -33,4 +26,12 @@ const DEVICE_DELETE_USERNAMES = ["it_admin"];
 
 export function canDeleteDevices(username: string | undefined): boolean {
   return !!username && DEVICE_DELETE_USERNAMES.includes(username);
+}
+
+/** The Configuration tab (assigning which roles can use which feature) is
+ * restricted to this specific account, same pattern as device deletion. */
+const CONFIG_ADMIN_USERNAMES = ["it_admin"];
+
+export function canConfigureFeatures(username: string | undefined): boolean {
+  return !!username && CONFIG_ADMIN_USERNAMES.includes(username);
 }
