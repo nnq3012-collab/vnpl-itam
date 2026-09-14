@@ -5,6 +5,7 @@ import { getSession } from "@/lib/session";
 import { canDeleteDevices } from "@/lib/rbac";
 import SelectAllCheckbox from "./select-all";
 import BulkDeleteButton from "./bulk-delete-button";
+import ReorderableTable, { type TableColumn, type TableRow } from "@/components/reorderable-table";
 
 const STATUS_LABELS: Record<DeviceStatus, string> = {
   IN_STOCK: "In Stock",
@@ -70,7 +71,10 @@ export default async function DevicesPage({
 
   const where: Prisma.DeviceWhereInput = {};
   if (params.assetId) where.assetId = { contains: params.assetId };
-  if (params.status) where.status = params.status as DeviceStatus;
+  if (params.status) {
+    const statuses = params.status.split(",") as DeviceStatus[];
+    where.status = statuses.length > 1 ? { in: statuses } : statuses[0];
+  }
   if (params.deviceTypeId) where.deviceTypeId = params.deviceTypeId;
   if (params.assignedUserId) {
     where.assignedUserId = params.assignedUserId === "UNASSIGNED" ? null : params.assignedUserId;
@@ -139,6 +143,88 @@ export default async function DevicesPage({
     if (v && k !== "sort" && k !== "dir") exportParams.set(k, v);
   });
   const exportQuery = exportParams.toString();
+
+  const pinnedColumn: TableColumn = { key: "select", header: <SelectAllCheckbox /> };
+
+  const columns: TableColumn[] = [
+    { key: "assetId", header: sortLink("assetId", "Asset ID") },
+    { key: "deviceType", header: sortLink("deviceType", "Device Type") },
+    { key: "makeModel", header: "Make/Model" },
+    { key: "cpu", header: "CPU" },
+    { key: "ram", header: "RAM" },
+    { key: "storage", header: "Storage" },
+    { key: "serialNumber", header: "Serial Number" },
+    { key: "status", header: sortLink("status", "Status") },
+    { key: "center", header: sortLink("center", "Center") },
+    { key: "department", header: "Department" },
+    { key: "assignedUser", header: sortLink("assignedUser", "Assigned User") },
+    { key: "assignedEmail", header: "Assigned Email" },
+    { key: "vendor", header: "Vendor" },
+    { key: "price", header: "Price" },
+    { key: "purchaseYear", header: "Purchase Year" },
+    { key: "remainingValue", header: "Remaining Value" },
+    { key: "dateRegistered", header: "Date Registered" },
+    { key: "lastUpdated", header: sortLink("lastUpdated", "Last Updated") },
+    { key: "createdBy", header: "Created By" },
+  ];
+
+  const rows: TableRow[] = devices.map((d) => {
+    const depreciation = depreciationInfo(d);
+    return {
+      key: d.assetId,
+      rowClassName: params.highlight === d.assetId ? "bg-amber-50" : "",
+      cells: {
+        select: <input type="checkbox" name="assetId" value={d.assetId} className="h-4 w-4 rounded border-slate-300" />,
+        assetId: (
+          <span className="font-medium text-slate-900">
+            <Link href={`/devices/${encodeURIComponent(d.assetId)}`} className="text-blue-600 hover:underline">
+              {d.assetId}
+            </Link>
+            {canEdit && (
+              <Link
+                href={`/devices/update?assetId=${encodeURIComponent(d.assetId)}`}
+                className="ml-2 text-xs text-slate-400 hover:text-slate-700"
+              >
+                Edit
+              </Link>
+            )}
+          </span>
+        ),
+        deviceType: <span className="text-slate-900">{d.deviceType.name}</span>,
+        makeModel: <span className="text-slate-600 max-w-xs truncate block">{d.makeModel ?? "—"}</span>,
+        cpu: <span className="text-slate-600">{d.cpu ?? "—"}</span>,
+        ram: <span className="text-slate-600">{d.ram ?? "—"}</span>,
+        storage: <span className="text-slate-600">{d.storage ?? "—"}</span>,
+        serialNumber: <span className="text-slate-600">{d.serialNumber ?? "—"}</span>,
+        status: (
+          <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[d.status]}`}>
+            {STATUS_LABELS[d.status]}
+          </span>
+        ),
+        center: <span className="text-slate-600">{d.location.center}</span>,
+        department: <span className="text-slate-600">{d.location.department}</span>,
+        assignedUser: <span className="text-slate-600">{d.assignedUser?.fullName ?? "Unassigned"}</span>,
+        assignedEmail: <span className="text-slate-600">{d.assignedUserEmail ?? "—"}</span>,
+        vendor: <span className="text-slate-600">{d.vendor?.name ?? "—"}</span>,
+        price: <span className="text-slate-600">{d.price != null ? Number(d.price).toLocaleString() : "—"}</span>,
+        purchaseYear: <span className="text-slate-600">{d.purchaseYear ?? "—"}</span>,
+        remainingValue: depreciation ? (
+          depreciation.fullyDepreciated ? (
+            <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-red-50 text-red-700">
+              Fully depreciated
+            </span>
+          ) : (
+            <span className="text-slate-600">{depreciation.remainingValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+          )
+        ) : (
+          <span className="text-slate-400">—</span>
+        ),
+        dateRegistered: <span className="text-slate-500">{d.dateRegistered.toLocaleDateString()}</span>,
+        lastUpdated: <span className="text-slate-500">{d.lastUpdated.toLocaleDateString()}</span>,
+        createdBy: <span className="text-slate-600">{createdByAssetId.get(d.assetId) ?? "—"}</span>,
+      },
+    };
+  });
 
   return (
     <div className="space-y-4">
@@ -238,105 +324,14 @@ export default async function DevicesPage({
       </div>
 
       <form id="print-labels-form" method="get" action="/labels" target="_blank" className="bg-white rounded-lg shadow overflow-x-auto">
-        <div className="flex items-center px-4 py-2 border-b border-slate-100">
-          <span className="text-xs text-slate-400">Check devices below, then click &quot;Print Labels&quot; above.</span>
-        </div>
-        <table className="min-w-full text-sm">
-          <thead className="bg-slate-50 text-slate-600 text-xs uppercase">
-            <tr>
-              <th className="px-4 py-2 text-left"><SelectAllCheckbox /></th>
-              <th className="px-4 py-2 text-left">{sortLink("assetId", "Asset ID")}</th>
-              <th className="px-4 py-2 text-left">{sortLink("deviceType", "Device Type")}</th>
-              <th className="px-4 py-2 text-left">Make/Model</th>
-              <th className="px-4 py-2 text-left">CPU</th>
-              <th className="px-4 py-2 text-left">RAM</th>
-              <th className="px-4 py-2 text-left">Storage</th>
-              <th className="px-4 py-2 text-left">Serial Number</th>
-              <th className="px-4 py-2 text-left">{sortLink("status", "Status")}</th>
-              <th className="px-4 py-2 text-left">{sortLink("center", "Center")}</th>
-              <th className="px-4 py-2 text-left">Department</th>
-              <th className="px-4 py-2 text-left">{sortLink("assignedUser", "Assigned User")}</th>
-              <th className="px-4 py-2 text-left">Assigned Email</th>
-              <th className="px-4 py-2 text-left">Vendor</th>
-              <th className="px-4 py-2 text-left">Price</th>
-              <th className="px-4 py-2 text-left">Purchase Year</th>
-              <th className="px-4 py-2 text-left">Remaining Value</th>
-              <th className="px-4 py-2 text-left">Date Registered</th>
-              <th className="px-4 py-2 text-left">{sortLink("lastUpdated", "Last Updated")}</th>
-              <th className="px-4 py-2 text-left">Created By</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {devices.map((d) => {
-              const depreciation = depreciationInfo(d);
-              return (
-              <tr
-                key={d.id}
-                id={`row-${d.assetId}`}
-                className={`hover:bg-slate-50 ${params.highlight === d.assetId ? "bg-amber-50" : ""}`}
-              >
-                <td className="px-4 py-2">
-                  <input type="checkbox" name="assetId" value={d.assetId} className="h-4 w-4 rounded border-slate-300" />
-                </td>
-                <td className="px-4 py-2 font-medium text-slate-900">
-                  <Link href={`/devices/${encodeURIComponent(d.assetId)}`} className="text-blue-600 hover:underline">
-                    {d.assetId}
-                  </Link>
-                  {canEdit && (
-                    <Link
-                      href={`/devices/update?assetId=${encodeURIComponent(d.assetId)}`}
-                      className="ml-2 text-xs text-slate-400 hover:text-slate-700"
-                    >
-                      Edit
-                    </Link>
-                  )}
-                </td>
-                <td className="px-4 py-2 text-slate-900">{d.deviceType.name}</td>
-                <td className="px-4 py-2 text-slate-600 max-w-xs truncate">{d.makeModel ?? "—"}</td>
-                <td className="px-4 py-2 text-slate-600">{d.cpu ?? "—"}</td>
-                <td className="px-4 py-2 text-slate-600">{d.ram ?? "—"}</td>
-                <td className="px-4 py-2 text-slate-600">{d.storage ?? "—"}</td>
-                <td className="px-4 py-2 text-slate-600">{d.serialNumber ?? "—"}</td>
-                <td className="px-4 py-2">
-                  <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[d.status]}`}>
-                    {STATUS_LABELS[d.status]}
-                  </span>
-                </td>
-                <td className="px-4 py-2 text-slate-600">{d.location.center}</td>
-                <td className="px-4 py-2 text-slate-600">{d.location.department}</td>
-                <td className="px-4 py-2 text-slate-600">{d.assignedUser?.fullName ?? "Unassigned"}</td>
-                <td className="px-4 py-2 text-slate-600">{d.assignedUserEmail ?? "—"}</td>
-                <td className="px-4 py-2 text-slate-600">{d.vendor?.name ?? "—"}</td>
-                <td className="px-4 py-2 text-slate-600">{d.price != null ? Number(d.price).toLocaleString() : "—"}</td>
-                <td className="px-4 py-2 text-slate-600">{d.purchaseYear ?? "—"}</td>
-                <td className="px-4 py-2">
-                  {depreciation ? (
-                    depreciation.fullyDepreciated ? (
-                      <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-red-50 text-red-700">
-                        Fully depreciated
-                      </span>
-                    ) : (
-                      <span className="text-slate-600">{depreciation.remainingValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
-                    )
-                  ) : (
-                    <span className="text-slate-400">—</span>
-                  )}
-                </td>
-                <td className="px-4 py-2 text-slate-500">{d.dateRegistered.toLocaleDateString()}</td>
-                <td className="px-4 py-2 text-slate-500">{d.lastUpdated.toLocaleDateString()}</td>
-                <td className="px-4 py-2 text-slate-600">{createdByAssetId.get(d.assetId) ?? "—"}</td>
-              </tr>
-              );
-            })}
-            {devices.length === 0 && (
-              <tr>
-                <td colSpan={20} className="px-4 py-8 text-center text-slate-400">
-                  No devices match the current filters.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+        <ReorderableTable
+          storageKey="device-master-column-order"
+          pinnedColumn={pinnedColumn}
+          columns={columns}
+          rows={rows}
+          emptyMessage="No devices match the current filters."
+          hint='Check devices below, then click "Print Labels" above.'
+        />
       </form>
       <p className="text-xs text-slate-400">{devices.length} device(s) shown.</p>
     </div>

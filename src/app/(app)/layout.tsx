@@ -3,7 +3,8 @@ import Link from "next/link";
 import { getSession } from "@/lib/session";
 import { canUseFeature } from "@/lib/feature-access";
 import { canConfigureFeatures } from "@/lib/rbac";
-import LogoutButton from "./logout-button";
+import NavDropdown from "./nav-dropdown";
+import AdminMenu from "./admin-menu";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
@@ -19,16 +20,20 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     ]).then(([a, b]) => a || b),
   ]);
   const canConfigure = canConfigureFeatures(session.username);
+  const canUpdate = session.role === "IT" || session.role === "HR";
+  const canManageReference = canManageTypesAndVendors || canManageEmployeesAndLocations;
 
-  const navItems = [
-    { href: "/dashboard", label: "Dashboard" },
+  const devicesGroup = [
     { href: "/devices", label: "Device Master" },
     { href: "/logs/allocation", label: "Allocation & Return Log" },
+  ];
+  const actionsGroup = [
     ...(canRegister ? [{ href: "/devices/new", label: "Register Device" }] : []),
-    ...(session.role === "IT" || session.role === "HR" ? [{ href: "/devices/update", label: "Update Device" }] : []),
-    ...(canManageTypesAndVendors || canManageEmployeesAndLocations ? [{ href: "/reference", label: "Reference Lists" }] : []),
+    ...(canUpdate ? [{ href: "/devices/update", label: "Update Device" }] : []),
+  ];
+  const dataGroup = [
+    ...(canManageReference ? [{ href: "/reference", label: "Reference Lists" }] : []),
     ...(canImportAnything ? [{ href: "/import", label: "Import" }] : []),
-    ...(canConfigure ? [{ href: "/configuration", label: "Configuration" }] : []),
   ];
 
   return (
@@ -38,22 +43,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <div className="flex items-center gap-6">
             <span className="font-semibold text-slate-900">VNPL ITAM</span>
             <nav className="flex items-center gap-4">
-              {navItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="text-sm text-slate-600 hover:text-slate-900"
-                >
-                  {item.label}
-                </Link>
-              ))}
+              <Link href="/dashboard" className="text-sm text-slate-600 hover:text-slate-900">
+                Dashboard
+              </Link>
+              <NavDropdown label="Devices" items={devicesGroup} />
+              {actionsGroup.length > 0 && <NavDropdown label="Actions" items={actionsGroup} />}
+              {dataGroup.length > 0 && <NavDropdown label="Data" items={dataGroup} />}
             </nav>
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-slate-500">
               {session.fullName} <span className="text-slate-400">({session.role})</span>
             </span>
-            <LogoutButton />
+            <AdminMenu showConfiguration={canConfigure} />
           </div>
         </div>
       </header>

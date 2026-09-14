@@ -101,11 +101,11 @@ export default async function DashboardPage() {
   const grandTotal = breakdown.reduce((sum, c) => sum + c.total, 0);
 
   const tiles = [
-    { label: "In Stock", value: counts.inStock, color: "bg-blue-50 text-blue-700" },
-    { label: "Deployed", value: counts.deployed, color: "bg-green-50 text-green-700" },
-    { label: "In Repair", value: counts.inRepair, color: "bg-amber-50 text-amber-700" },
-    { label: "Lost / Stolen / Broken", value: counts.lostStolenBroken, color: "bg-red-50 text-red-700" },
-    { label: "Retired", value: counts.retired, color: "bg-slate-100 text-slate-700" },
+    { label: "In Stock", value: counts.inStock, color: "bg-blue-50 text-blue-700", status: "IN_STOCK" },
+    { label: "Deployed", value: counts.deployed, color: "bg-green-50 text-green-700", status: "DEPLOYED" },
+    { label: "In Repair", value: counts.inRepair, color: "bg-amber-50 text-amber-700", status: "IN_REPAIR" },
+    { label: "Lost / Stolen / Broken", value: counts.lostStolenBroken, color: "bg-red-50 text-red-700", status: "LOST,STOLEN,BROKEN" },
+    { label: "Retired", value: counts.retired, color: "bg-slate-100 text-slate-700", status: "RETIRED" },
   ];
 
   return (
@@ -114,10 +114,14 @@ export default async function DashboardPage() {
         <h1 className="text-lg font-semibold text-slate-900 mb-4">Dashboard</h1>
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
           {tiles.map((tile) => (
-            <div key={tile.label} className={`rounded-lg p-4 ${tile.color}`}>
+            <Link
+              key={tile.label}
+              href={`/devices?status=${tile.status}`}
+              className={`rounded-lg p-4 ${tile.color} hover:opacity-80 transition-opacity`}
+            >
               <div className="text-2xl font-semibold">{tile.value}</div>
               <div className="text-xs mt-1">{tile.label}</div>
-            </div>
+            </Link>
           ))}
         </div>
       </div>

@@ -3,6 +3,7 @@ import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { classifyAuditEvent, AUDIT_EVENT_BADGE } from "@/lib/audit-log-display";
+import ReorderableTable, { type TableColumn, type TableRow } from "@/components/reorderable-table";
 
 const ALLOCATION_MARKERS = ["Allocation:", "Return:", "Reassignment:"];
 
@@ -25,6 +26,34 @@ export default async function AllocationLogPage({
     where,
     orderBy: { timestamp: "desc" },
     take: 500,
+  });
+
+  const columns: TableColumn[] = [
+    { key: "date", header: "Date" },
+    { key: "assetId", header: "Asset ID" },
+    { key: "type", header: "Type" },
+    { key: "details", header: "Details" },
+    { key: "operator", header: "Operator" },
+    { key: "reason", header: "Reason" },
+  ];
+
+  const rows: TableRow[] = logs.map((log) => {
+    const type = classifyAuditEvent(log.action, log.newState);
+    return {
+      key: log.id,
+      cells: {
+        date: <span className="text-slate-500">{log.timestamp.toLocaleString()}</span>,
+        assetId: <span className="font-medium text-slate-900">{log.assetId}</span>,
+        type: (
+          <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${AUDIT_EVENT_BADGE[type]}`}>
+            {type}
+          </span>
+        ),
+        details: <span className="text-slate-600">{log.newState}</span>,
+        operator: <span className="text-slate-600">{log.operator}</span>,
+        reason: <span className="text-slate-600">{log.reason ?? "—"}</span>,
+      },
+    };
   });
 
   return (
@@ -51,44 +80,12 @@ export default async function AllocationLogPage({
       </form>
 
       <div className="bg-white rounded-lg shadow overflow-x-auto">
-        <table className="min-w-full text-sm">
-          <thead className="bg-slate-50 text-slate-600 text-xs uppercase">
-            <tr>
-              <th className="px-4 py-2 text-left">Date</th>
-              <th className="px-4 py-2 text-left">Asset ID</th>
-              <th className="px-4 py-2 text-left">Type</th>
-              <th className="px-4 py-2 text-left">Details</th>
-              <th className="px-4 py-2 text-left">Operator</th>
-              <th className="px-4 py-2 text-left">Reason</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {logs.map((log) => {
-              const type = classifyAuditEvent(log.action, log.newState);
-              return (
-                <tr key={log.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-2 text-slate-500">{log.timestamp.toLocaleString()}</td>
-                  <td className="px-4 py-2 font-medium text-slate-900">{log.assetId}</td>
-                  <td className="px-4 py-2">
-                    <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${AUDIT_EVENT_BADGE[type]}`}>
-                      {type}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2 text-slate-600">{log.newState}</td>
-                  <td className="px-4 py-2 text-slate-600">{log.operator}</td>
-                  <td className="px-4 py-2 text-slate-600">{log.reason ?? "—"}</td>
-                </tr>
-              );
-            })}
-            {logs.length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-slate-400">
-                  No allocation or return events found.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+        <ReorderableTable
+          storageKey="allocation-log-column-order"
+          columns={columns}
+          rows={rows}
+          emptyMessage="No allocation or return events found."
+        />
       </div>
       <p className="text-xs text-slate-400">{logs.length} event(s) shown (most recent 500).</p>
     </div>
