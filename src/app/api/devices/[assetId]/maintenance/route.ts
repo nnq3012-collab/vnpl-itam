@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireIT } from "@/lib/api-guard";
 import { AuditAction } from "@prisma/client";
+import { formatMaintenanceDescription, MAINTENANCE_CATEGORIES } from "@/lib/audit-log-display";
 
 export async function POST(
   request: NextRequest,
@@ -16,8 +17,12 @@ export async function POST(
 
   const body = await request.json().catch(() => null);
   const description = typeof body?.description === "string" ? body.description.trim() : "";
+  const category = typeof body?.category === "string" ? body.category.trim() : "";
   if (!description) {
     return NextResponse.json({ error: "Description is required" }, { status: 400 });
+  }
+  if (category && !(MAINTENANCE_CATEGORIES as readonly string[]).includes(category)) {
+    return NextResponse.json({ error: "Invalid category" }, { status: 400 });
   }
 
   const log = await prisma.auditLog.create({
@@ -25,7 +30,7 @@ export async function POST(
       assetId: device.assetId,
       action: AuditAction.MAINTENANCE,
       previousState: null,
-      newState: description,
+      newState: formatMaintenanceDescription(category, description),
       operator: guard.session.fullName,
       reason: null,
     },

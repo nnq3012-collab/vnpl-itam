@@ -1,5 +1,27 @@
 export type AuditEventType = "Allocation" | "Return" | "Reassignment" | "Maintenance" | "Other";
 
+export const MAINTENANCE_CATEGORIES = [
+  "Repair",
+  "Preventive / Cleaning",
+  "Inspection",
+  "Part Replacement",
+  "Software / OS",
+  "Other",
+] as const;
+
+/** Maintenance descriptions are stored as "[Category] description" — no
+ * schema change, same string-marker approach used for Allocation/Return. */
+export function formatMaintenanceDescription(category: string, description: string): string {
+  return category ? `[${category}] ${description}` : description;
+}
+
+export function parseMaintenanceDescription(newState: string | null): { category: string | null; text: string } {
+  if (!newState) return { category: null, text: "" };
+  const match = newState.match(/^\[(.+?)\]\s*(.*)$/);
+  if (!match) return { category: null, text: newState };
+  return { category: match[1], text: match[2] };
+}
+
 export function classifyAuditEvent(action: string, newState: string | null): AuditEventType {
   if (action === "MAINTENANCE") return "Maintenance";
   if (!newState) return "Other";

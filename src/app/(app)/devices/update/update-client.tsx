@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Combobox from "../combobox";
+import MaintenanceForm from "../[assetId]/maintenance-form";
 
 type DeviceRow = {
   id: string;
@@ -196,6 +197,7 @@ function EditForm({
   }
 
   return (
+    <div className="space-y-4">
     <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 space-y-4">
       <div className="flex items-center justify-between">
         <div className="text-sm text-slate-500">
@@ -417,5 +419,18 @@ function EditForm({
         {submitting ? "Saving..." : "Save Changes"}
       </button>
     </form>
+
+    {isIT && (
+      <details className="bg-white rounded-lg shadow p-4 group">
+        <summary className="text-sm font-medium text-slate-700 cursor-pointer select-none list-none flex items-center gap-1.5">
+          <span className="text-slate-400 transition-transform group-open:rotate-90">▶</span>
+          Log Maintenance Event
+        </summary>
+        <div className="mt-3">
+          <MaintenanceForm assetId={device.assetId} compact onLogged={() => {}} />
+        </div>
+      </details>
+    )}
+    </div>
   );
 }

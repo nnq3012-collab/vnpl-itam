@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { Role } from "@prisma/client";
-import { classifyAuditEvent, AUDIT_EVENT_BADGE } from "@/lib/audit-log-display";
+import { classifyAuditEvent, AUDIT_EVENT_BADGE, parseMaintenanceDescription } from "@/lib/audit-log-display";
 import MaintenanceForm from "./maintenance-form";
 
 export default async function DeviceDetailPage({
@@ -97,7 +97,22 @@ export default async function DeviceDetailPage({
                       {type === "Other" ? log.action.replace(/_/g, " ") : type}
                     </span>
                   </td>
-                  <td className="px-4 py-2 text-slate-600">{log.newState ?? "—"}</td>
+                  <td className="px-4 py-2 text-slate-600">
+                    {type === "Maintenance" ? (
+                      (() => {
+                        const { category, text } = parseMaintenanceDescription(log.newState);
+                        return category ? (
+                          <>
+                            <span className="text-slate-400">{category}:</span> {text}
+                          </>
+                        ) : (
+                          text
+                        );
+                      })()
+                    ) : (
+                      log.newState ?? "—"
+                    )}
+                  </td>
                   <td className="px-4 py-2 text-slate-600">{log.operator}</td>
                   <td className="px-4 py-2 text-slate-600">{log.reason ?? "—"}</td>
                 </tr>
