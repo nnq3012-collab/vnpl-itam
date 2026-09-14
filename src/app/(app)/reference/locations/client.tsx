@@ -64,6 +64,25 @@ export default function LocationsClient({ initial }: { initial: Location[] }) {
     <div className="bg-white rounded-lg shadow p-6 space-y-4">
       {error && <p className="text-sm text-red-600">{error}</p>}
 
+      <form onSubmit={handleAdd} className="space-y-2 pb-4 border-b border-slate-100">
+        <p className="text-xs font-medium text-slate-500">Add Location</p>
+        <div className="flex items-end gap-3">
+          <div className="flex-1">
+            <label className="block text-xs font-medium text-slate-500 mb-1">Center</label>
+            <input type="text" value={newCenter} onChange={(e) => setNewCenter(e.target.value)}
+              className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" required />
+          </div>
+          <div className="flex-1">
+            <label className="block text-xs font-medium text-slate-500 mb-1">Department</label>
+            <input type="text" value={newDepartment} onChange={(e) => setNewDepartment(e.target.value)}
+              className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" required />
+          </div>
+          <button type="submit" className="rounded-md bg-blue-600 text-white text-sm font-medium px-4 py-1.5 hover:bg-blue-700">
+            Add
+          </button>
+        </div>
+      </form>
+
       <table className="w-full text-sm">
         <thead className="text-xs uppercase text-slate-500">
           <tr>
@@ -104,22 +123,6 @@ export default function LocationsClient({ initial }: { initial: Location[] }) {
           ))}
         </tbody>
       </table>
-
-      <form onSubmit={handleAdd} className="flex items-end gap-3 pt-2 border-t border-slate-100">
-        <div className="flex-1">
-          <label className="block text-xs font-medium text-slate-500 mb-1">Center</label>
-          <input type="text" value={newCenter} onChange={(e) => setNewCenter(e.target.value)}
-            className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" required />
-        </div>
-        <div className="flex-1">
-          <label className="block text-xs font-medium text-slate-500 mb-1">Department</label>
-          <input type="text" value={newDepartment} onChange={(e) => setNewDepartment(e.target.value)}
-            className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" required />
-        </div>
-        <button type="submit" className="rounded-md bg-blue-600 text-white text-sm font-medium px-4 py-1.5 hover:bg-blue-700">
-          Add
-        </button>
-      </form>
     </div>
   );
 }

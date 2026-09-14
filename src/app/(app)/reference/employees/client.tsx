@@ -133,6 +133,51 @@ export default function EmployeesClient({ initial, locations }: { initial: Emplo
         </div>
       )}
 
+      <form onSubmit={handleAdd} className="space-y-2 pb-4 border-b border-slate-100">
+        <p className="text-xs font-medium text-slate-500">Add Employee</p>
+        <div className="grid grid-cols-6 gap-3 items-end">
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Employee ID</label>
+            <input value={newForm.employeeId} onChange={(e) => setNewForm({ ...newForm, employeeId: e.target.value })}
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm" required />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Full Name</label>
+            <input value={newForm.fullName} onChange={(e) => setNewForm({ ...newForm, fullName: e.target.value })}
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm" required />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Email</label>
+            <input value={newForm.email} onChange={(e) => setNewForm({ ...newForm, email: e.target.value })}
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Center</label>
+            <select value={newForm.center}
+              onChange={(e) => setNewForm({ ...newForm, center: e.target.value, department: "" })}
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm">
+              <option value="">—</option>
+              {centers.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Department</label>
+            <select value={newForm.department}
+              onChange={(e) => setNewForm({ ...newForm, department: e.target.value })}
+              disabled={!newForm.center}
+              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm disabled:bg-slate-50">
+              <option value="">—</option>
+              {departmentsFor(newForm.center).map((d) => <option key={d} value={d}>{d}</option>)}
+            </select>
+          </div>
+          <div className="flex gap-2">
+            <button type="submit" className="rounded-md bg-blue-600 text-white text-sm font-medium px-4 py-1.5 hover:bg-blue-700">
+              Add
+            </button>
+          </div>
+        </div>
+      </form>
+
       <input
         type="text"
         value={query}
@@ -221,48 +266,6 @@ export default function EmployeesClient({ initial, locations }: { initial: Emplo
           </tbody>
         </table>
       </div>
-
-      <form onSubmit={handleAdd} className="grid grid-cols-6 gap-3 items-end pt-2 border-t border-slate-100">
-        <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">Employee ID</label>
-          <input value={newForm.employeeId} onChange={(e) => setNewForm({ ...newForm, employeeId: e.target.value })}
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm" required />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">Full Name</label>
-          <input value={newForm.fullName} onChange={(e) => setNewForm({ ...newForm, fullName: e.target.value })}
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm" required />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">Email</label>
-          <input value={newForm.email} onChange={(e) => setNewForm({ ...newForm, email: e.target.value })}
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">Center</label>
-          <select value={newForm.center}
-            onChange={(e) => setNewForm({ ...newForm, center: e.target.value, department: "" })}
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm">
-            <option value="">—</option>
-            {centers.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">Department</label>
-          <select value={newForm.department}
-            onChange={(e) => setNewForm({ ...newForm, department: e.target.value })}
-            disabled={!newForm.center}
-            className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm disabled:bg-slate-50">
-            <option value="">—</option>
-            {departmentsFor(newForm.center).map((d) => <option key={d} value={d}>{d}</option>)}
-          </select>
-        </div>
-        <div className="flex gap-2">
-          <button type="submit" className="rounded-md bg-blue-600 text-white text-sm font-medium px-4 py-1.5 hover:bg-blue-700">
-            Add
-          </button>
-        </div>
-      </form>
     </div>
   );
 }

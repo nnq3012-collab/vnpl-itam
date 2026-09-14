@@ -84,6 +84,46 @@ export default function DeviceTypesClient({ initial }: { initial: DeviceType[] }
     <div className="bg-white rounded-lg shadow p-6 space-y-4">
       {error && <p className="text-sm text-red-600">{error}</p>}
 
+      <form onSubmit={handleAdd} className="space-y-2 pb-4 border-b border-slate-100">
+        <p className="text-xs font-medium text-slate-500">Add Device Type</p>
+        <div className="flex items-end gap-3">
+          <div className="flex-1">
+            <label className="block text-xs font-medium text-slate-500 mb-1">Name</label>
+            <input
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="e.g. Printer"
+              className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+              required
+            />
+          </div>
+          <label className="inline-flex items-center gap-2 pb-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={newHasSpecs}
+              onChange={(e) => setNewHasSpecs(e.target.checked)}
+              className="h-4 w-4 rounded border-slate-300"
+            />
+            <span className="text-xs text-slate-600">Has CPU/RAM/Storage</span>
+          </label>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Depreciation (months)</label>
+            <input
+              type="number"
+              min={1}
+              value={newDepreciationMonths}
+              onChange={(e) => setNewDepreciationMonths(e.target.value)}
+              placeholder="e.g. 36"
+              className="w-24 rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+            />
+          </div>
+          <button type="submit" className="rounded-md bg-blue-600 text-white text-sm font-medium px-4 py-1.5 hover:bg-blue-700">
+            Add
+          </button>
+        </div>
+      </form>
+
       <table className="w-full text-sm">
         <thead className="text-xs uppercase text-slate-500">
           <tr>
@@ -149,42 +189,6 @@ export default function DeviceTypesClient({ initial }: { initial: DeviceType[] }
         </tbody>
       </table>
 
-      <form onSubmit={handleAdd} className="flex items-end gap-3 pt-2 border-t border-slate-100">
-        <div className="flex-1">
-          <label className="block text-xs font-medium text-slate-500 mb-1">New Device Type</label>
-          <input
-            type="text"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder="e.g. Printer"
-            className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
-            required
-          />
-        </div>
-        <label className="inline-flex items-center gap-2 pb-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={newHasSpecs}
-            onChange={(e) => setNewHasSpecs(e.target.checked)}
-            className="h-4 w-4 rounded border-slate-300"
-          />
-          <span className="text-xs text-slate-600">Has CPU/RAM/Storage</span>
-        </label>
-        <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">Depreciation (months)</label>
-          <input
-            type="number"
-            min={1}
-            value={newDepreciationMonths}
-            onChange={(e) => setNewDepreciationMonths(e.target.value)}
-            placeholder="e.g. 36"
-            className="w-24 rounded-md border border-slate-300 px-3 py-1.5 text-sm"
-          />
-        </div>
-        <button type="submit" className="rounded-md bg-blue-600 text-white text-sm font-medium px-4 py-1.5 hover:bg-blue-700">
-          Add
-        </button>
-      </form>
       <p className="text-xs text-slate-400">
         Click a name to rename it. Toggle the checkbox to instantly control whether Register/Update Device shows
         CPU/RAM/Storage fields for that type.
