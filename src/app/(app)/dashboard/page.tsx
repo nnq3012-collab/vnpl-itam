@@ -47,6 +47,7 @@ async function getStatusCounts() {
 type StatusCounts = Partial<Record<DeviceStatus, number>>;
 type DeptBreakdown = { department: string; total: number; statusCounts: StatusCounts };
 type CenterBreakdown = { center: string; total: number; statusCounts: StatusCounts; departments: DeptBreakdown[] };
+type DeviceTypeBreakdown = { deviceTypeId: string; deviceTypeName: string; total: number; statusCounts: StatusCounts };
 
 function addStatus(counts: StatusCounts, status: DeviceStatus) {
   counts[status] = (counts[status] ?? 0) + 1;
@@ -83,6 +84,27 @@ async function getLocationBreakdown(): Promise<CenterBreakdown[]> {
   return result.sort((a, b) => b.total - a.total);
 }
 
+async function getDeviceTypeBreakdown(): Promise<DeviceTypeBreakdown[]> {
+  const devices = await prisma.device.findMany({
+    select: { status: true, deviceTypeId: true, deviceType: { select: { name: true } } },
+  });
+
+  const byType = new Map<string, { name: string; statusCounts: StatusCounts }>();
+  for (const d of devices) {
+    if (!byType.has(d.deviceTypeId)) byType.set(d.deviceTypeId, { name: d.deviceType.name, statusCounts: {} });
+    addStatus(byType.get(d.deviceTypeId)!.statusCounts, d.status);
+  }
+
+  const result: DeviceTypeBreakdown[] = Array.from(byType.entries()).map(([deviceTypeId, entry]) => ({
+    deviceTypeId,
+    deviceTypeName: entry.name,
+    total: Object.values(entry.statusCounts).reduce((a, b) => a + b, 0),
+    statusCounts: entry.statusCounts,
+  }));
+
+  return result.sort((a, b) => b.total - a.total);
+}
+
 function StatusChips({ statusCounts }: { statusCounts: StatusCounts }) {
   const entries = (Object.entries(statusCounts) as [DeviceStatus, number][]).sort((a, b) => b[1] - a[1]);
   return (
@@ -97,7 +119,11 @@ function StatusChips({ statusCounts }: { statusCounts: StatusCounts }) {
 }
 
 export default async function DashboardPage() {
-  const [counts, breakdown] = await Promise.all([getStatusCounts(), getLocationBreakdown()]);
+  const [counts, breakdown, typeBreakdown] = await Promise.all([
+    getStatusCounts(),
+    getLocationBreakdown(),
+    getDeviceTypeBreakdown(),
+  ]);
   const grandTotal = breakdown.reduce((sum, c) => sum + c.total, 0);
 
   const tiles = [
@@ -182,6 +208,46 @@ export default async function DashboardPage() {
               {breakdown.length === 0 && (
                 <tr>
                   <td colSpan={4} className="py-6 text-center text-slate-400">
+                    No devices registered yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-medium text-slate-700">Devices by Type</h2>
+          <span className="text-xs text-slate-400">{typeBreakdown.length} type(s)</span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="text-xs uppercase text-slate-500">
+              <tr>
+                <th className="text-left pb-2">Device Type</th>
+                <th className="text-right pb-2 w-16">Total</th>
+                <th className="text-right pb-2">Status Breakdown</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {typeBreakdown.map((t) => (
+                <tr key={t.deviceTypeId}>
+                  <td className="py-1.5 pr-2 text-slate-900">
+                    <Link href={`/devices?deviceTypeId=${encodeURIComponent(t.deviceTypeId)}`} className="hover:underline">
+                      {t.deviceTypeName}
+                    </Link>
+                  </td>
+                  <td className="py-1.5 text-right text-slate-900">{t.total}</td>
+                  <td className="py-1.5">
+                    <StatusChips statusCounts={t.statusCounts} />
+                  </td>
+                </tr>
+              ))}
+              {typeBreakdown.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="py-6 text-center text-slate-400">
                     No devices registered yet.
                   </td>
                 </tr>
