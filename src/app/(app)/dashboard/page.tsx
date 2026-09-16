@@ -1,8 +1,14 @@
 import { Fragment } from "react";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { DeviceStatus } from "@prisma/client";
+import { DeviceStatus, EmployeeStatus } from "@prisma/client";
 import SearchBox from "./search-box";
+
+const EMPLOYEE_STATUS_LABELS: Record<EmployeeStatus, string> = {
+  ACTIVE: "Active",
+  RESIGNED: "Resigned",
+  TRANSFERRED: "Transferred",
+};
 
 const STATUS_LABELS: Record<DeviceStatus, string> = {
   IN_STOCK: "In Stock",
@@ -105,6 +111,18 @@ async function getDeviceTypeBreakdown(): Promise<DeviceTypeBreakdown[]> {
   return result.sort((a, b) => b.total - a.total);
 }
 
+async function getStaleAssignments() {
+  return prisma.device.findMany({
+    where: {
+      status: { not: DeviceStatus.RETIRED },
+      assignedUserId: { not: null },
+      assignedUser: { status: { not: EmployeeStatus.ACTIVE } },
+    },
+    include: { deviceType: true, location: true, assignedUser: true },
+    orderBy: { lastUpdated: "desc" },
+  });
+}
+
 function StatusChips({ statusCounts }: { statusCounts: StatusCounts }) {
   const entries = (Object.entries(statusCounts) as [DeviceStatus, number][]).sort((a, b) => b[1] - a[1]);
   return (
@@ -119,10 +137,11 @@ function StatusChips({ statusCounts }: { statusCounts: StatusCounts }) {
 }
 
 export default async function DashboardPage() {
-  const [counts, breakdown, typeBreakdown] = await Promise.all([
+  const [counts, breakdown, typeBreakdown, staleAssignments] = await Promise.all([
     getStatusCounts(),
     getLocationBreakdown(),
     getDeviceTypeBreakdown(),
+    getStaleAssignments(),
   ]);
   const grandTotal = breakdown.reduce((sum, c) => sum + c.total, 0);
 
@@ -155,6 +174,60 @@ export default async function DashboardPage() {
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-sm font-medium text-slate-700 mb-3">Quick search by Asset ID</h2>
         <SearchBox />
+      </div>
+
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-sm font-medium text-slate-700">Active Devices Linked to Inactive Employees</h2>
+          <span className={`text-xs font-medium ${staleAssignments.length > 0 ? "text-amber-700" : "text-slate-400"}`}>
+            {staleAssignments.length} device(s)
+          </span>
+        </div>
+        <p className="text-xs text-slate-400 mb-3">
+          Non-retired devices still assigned to an employee marked Resigned or Transferred — reassign or return these.
+        </p>
+        {staleAssignments.length === 0 ? (
+          <p className="text-sm text-slate-400 py-4 text-center">All assigned devices belong to active employees.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="text-left pb-2">Asset ID</th>
+                  <th className="text-left pb-2">Device Type</th>
+                  <th className="text-left pb-2">Status</th>
+                  <th className="text-left pb-2">Assigned To</th>
+                  <th className="text-left pb-2">Employee Status</th>
+                  <th className="text-left pb-2">Center / Department</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {staleAssignments.map((d) => (
+                  <tr key={d.id} className="bg-amber-50">
+                    <td className="py-1.5 pr-2 font-medium text-slate-900">
+                      <Link href={`/devices/${encodeURIComponent(d.assetId)}`} className="hover:underline">
+                        {d.assetId}
+                      </Link>
+                    </td>
+                    <td className="py-1.5 pr-2 text-slate-600">{d.deviceType.name}</td>
+                    <td className="py-1.5 pr-2">
+                      <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[d.status]}`}>
+                        {STATUS_LABELS[d.status]}
+                      </span>
+                    </td>
+                    <td className="py-1.5 pr-2 text-slate-600">{d.assignedUser?.fullName ?? "—"}</td>
+                    <td className="py-1.5 pr-2">
+                      <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-800">
+                        {d.assignedUser ? EMPLOYEE_STATUS_LABELS[d.assignedUser.status] : "—"}
+                      </span>
+                    </td>
+                    <td className="py-1.5 text-slate-600">{d.location.center} / {d.location.department}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-lg shadow p-6">
