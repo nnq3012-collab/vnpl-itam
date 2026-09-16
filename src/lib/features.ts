@@ -31,6 +31,12 @@ export const FEATURES: FeatureDefinition[] = [
     defaultRoles: ["IT", "HR"],
   },
   {
+    key: "devices.bulkEdit",
+    label: "Bulk Edit Devices",
+    description: "Apply the same Status, Make/Model, Location, Vendor, Price, or Purchase Year change to many selected devices at once.",
+    defaultRoles: ["IT"],
+  },
+  {
     key: "reference.deviceTypesAndVendors",
     label: "Manage Device Types & Vendors",
     description: "Edit the Device Types and Vendors reference lists, including depreciation periods.",

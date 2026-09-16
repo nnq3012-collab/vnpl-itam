@@ -3,8 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { DeviceStatus, Prisma, Role } from "@prisma/client";
 import { getSession } from "@/lib/session";
 import { canDeleteDevices } from "@/lib/rbac";
+import { canUseFeature } from "@/lib/feature-access";
 import SelectAllCheckbox from "./select-all";
 import BulkDeleteButton from "./bulk-delete-button";
+import BulkEditPanel from "./bulk-edit-panel";
 import ReorderableTable, { type TableColumn, type TableRow } from "@/components/reorderable-table";
 
 const STATUS_LABELS: Record<DeviceStatus, string> = {
@@ -68,6 +70,7 @@ export default async function DevicesPage({
   const session = await getSession();
   const canEdit = session?.role === Role.IT || session?.role === Role.HR;
   const canDelete = canDeleteDevices(session?.username);
+  const canBulkEdit = session ? await canUseFeature(session.role, "devices.bulkEdit") : false;
 
   const where: Prisma.DeviceWhereInput = {};
   if (params.assetId) where.assetId = { contains: params.assetId };
@@ -86,7 +89,7 @@ export default async function DevicesPage({
     };
   }
 
-  const [devices, deviceTypes, locations, employees] = await Promise.all([
+  const [devices, deviceTypes, locations, employees, vendors] = await Promise.all([
     prisma.device.findMany({
       where,
       include: { deviceType: true, location: true, assignedUser: true, vendor: true },
@@ -95,6 +98,7 @@ export default async function DevicesPage({
     prisma.deviceType.findMany({ orderBy: { name: "asc" } }),
     prisma.location.findMany({ orderBy: [{ center: "asc" }, { department: "asc" }] }),
     prisma.employee.findMany({ orderBy: { fullName: "asc" } }),
+    prisma.vendor.findMany({ orderBy: { name: "asc" } }),
   ]);
 
   const centers = Array.from(new Set(locations.map((l) => l.center))).sort();
@@ -318,6 +322,7 @@ export default async function DevicesPage({
           >
             Print Labels
           </button>
+          {canBulkEdit && <BulkEditPanel vendors={vendors} locations={locations} />}
           {canDelete && <BulkDeleteButton />}
         </div>
         </form>
