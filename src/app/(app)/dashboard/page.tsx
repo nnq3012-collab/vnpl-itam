@@ -3,6 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { DeviceStatus, EmployeeStatus } from "@prisma/client";
 import SearchBox from "./search-box";
+import { getEmployeesWithoutDevices } from "@/lib/employees-without-devices";
 
 const EMPLOYEE_STATUS_LABELS: Record<EmployeeStatus, string> = {
   ACTIVE: "Active",
@@ -123,14 +124,6 @@ async function getStaleAssignments() {
   });
 }
 
-async function getEmployeesWithoutDevices(center?: string) {
-  return prisma.employee.findMany({
-    where: { status: EmployeeStatus.ACTIVE, devices: { none: {} }, ...(center ? { location: { center } } : {}) },
-    include: { location: true },
-    orderBy: { fullName: "asc" },
-  });
-}
-
 function StatusChips({ statusCounts }: { statusCounts: StatusCounts }) {
   const entries = (Object.entries(statusCounts) as [DeviceStatus, number][]).sort((a, b) => b[1] - a[1]);
   return (
@@ -190,113 +183,6 @@ export default async function DashboardPage({
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-sm font-medium text-slate-700 mb-3">Quick search by Asset ID</h2>
         <SearchBox />
-      </div>
-
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex items-center justify-between mb-1">
-          <h2 className="text-sm font-medium text-slate-700">Active Devices Linked to Inactive Employees</h2>
-          <span className={`text-xs font-medium ${staleAssignments.length > 0 ? "text-amber-700" : "text-slate-500"}`}>
-            {staleAssignments.length} device(s)
-          </span>
-        </div>
-        <p className="text-xs text-slate-500 mb-3">
-          Non-retired devices still assigned to an employee marked Resigned or Transferred — reassign or return these.
-        </p>
-        {staleAssignments.length === 0 ? (
-          <p className="text-sm text-slate-500 py-4 text-center">All assigned devices belong to active employees.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-xs uppercase text-slate-500">
-                <tr>
-                  <th className="text-left pb-2">Asset ID</th>
-                  <th className="text-left pb-2">Device Type</th>
-                  <th className="text-left pb-2">Status</th>
-                  <th className="text-left pb-2">Assigned To</th>
-                  <th className="text-left pb-2">Employee Status</th>
-                  <th className="text-left pb-2">Center / Department</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {staleAssignments.map((d) => (
-                  <tr key={d.id} className="bg-amber-50">
-                    <td className="py-1.5 pr-2 font-medium text-slate-900">
-                      <Link href={`/devices/${encodeURIComponent(d.assetId)}`} className="hover:underline">
-                        {d.assetId}
-                      </Link>
-                    </td>
-                    <td className="py-1.5 pr-2 text-slate-600">{d.deviceType.name}</td>
-                    <td className="py-1.5 pr-2">
-                      <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[d.status]}`}>
-                        {STATUS_LABELS[d.status]}
-                      </span>
-                    </td>
-                    <td className="py-1.5 pr-2 text-slate-600">{d.assignedUser?.fullName ?? "—"}</td>
-                    <td className="py-1.5 pr-2">
-                      <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-800">
-                        {d.assignedUser ? EMPLOYEE_STATUS_LABELS[d.assignedUser.status] : "—"}
-                      </span>
-                    </td>
-                    <td className="py-1.5 text-slate-600">{d.location.center} / {d.location.department}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex items-center justify-between mb-1">
-          <h2 className="text-sm font-medium text-slate-700">Active Employees Without Devices</h2>
-          <span className={`text-xs font-medium ${employeesWithoutDevices.length > 0 ? "text-amber-700" : "text-slate-500"}`}>
-            {employeesWithoutDevices.length} employee(s)
-          </span>
-        </div>
-        <form method="get" className="flex items-center justify-between gap-3 mb-3">
-          <p className="text-xs text-slate-500">
-            Active employees with no device assigned at all — check whether they are missing from device records.
-          </p>
-          <div className="flex items-center gap-2 shrink-0">
-            <select name="missingCenter" defaultValue={selectedCenter} className="rounded-md border border-slate-400 px-2 py-1 text-sm">
-              <option value="">All centers</option>
-              {centerRows.map(({ center }) => (
-                <option key={center} value={center}>{center}</option>
-              ))}
-            </select>
-            <button type="submit" className="rounded-md border border-slate-400 bg-white text-sm font-medium text-slate-900 px-3 py-1 hover:bg-slate-50">
-              Apply
-            </button>
-          </div>
-        </form>
-        {employeesWithoutDevices.length === 0 ? (
-          <p className="text-sm text-slate-500 py-4 text-center">Every active employee has at least one device.</p>
-        ) : (
-          <div className="overflow-auto max-h-80">
-            <table className="w-full text-sm">
-              <thead className="text-xs uppercase text-slate-500 sticky top-0 bg-white">
-                <tr>
-                  <th className="text-left pb-2">Employee ID</th>
-                  <th className="text-left pb-2">Name</th>
-                  <th className="text-left pb-2">Email</th>
-                  <th className="text-left pb-2">Center / Department</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {employeesWithoutDevices.map((e) => (
-                  <tr key={e.id}>
-                    <td className="py-1.5 pr-2 font-medium text-slate-900">{e.employeeId}</td>
-                    <td className="py-1.5 pr-2 text-slate-600">{e.fullName}</td>
-                    <td className="py-1.5 pr-2 text-slate-600">{e.email ?? "—"}</td>
-                    <td className="py-1.5 text-slate-600">
-                      {e.location ? `${e.location.center} / ${e.location.department}` : "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
       </div>
 
       <div className="bg-white rounded-lg shadow p-6">
@@ -397,6 +283,122 @@ export default async function DashboardPage({
             </tbody>
           </table>
         </div>
+      </div>
+
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-sm font-medium text-slate-700">Active Devices Linked to Inactive Employees</h2>
+          <span className={`text-xs font-medium ${staleAssignments.length > 0 ? "text-amber-700" : "text-slate-500"}`}>
+            {staleAssignments.length} device(s)
+          </span>
+        </div>
+        <p className="text-xs text-slate-500 mb-3">
+          Non-retired devices still assigned to an employee marked Resigned or Transferred — reassign or return these.
+        </p>
+        {staleAssignments.length === 0 ? (
+          <p className="text-sm text-slate-500 py-4 text-center">All assigned devices belong to active employees.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="text-left pb-2">Asset ID</th>
+                  <th className="text-left pb-2">Device Type</th>
+                  <th className="text-left pb-2">Status</th>
+                  <th className="text-left pb-2">Assigned To</th>
+                  <th className="text-left pb-2">Employee Status</th>
+                  <th className="text-left pb-2">Center / Department</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {staleAssignments.map((d) => (
+                  <tr key={d.id} className="bg-amber-50">
+                    <td className="py-1.5 pr-2 font-medium text-slate-900">
+                      <Link href={`/devices/${encodeURIComponent(d.assetId)}`} className="hover:underline">
+                        {d.assetId}
+                      </Link>
+                    </td>
+                    <td className="py-1.5 pr-2 text-slate-600">{d.deviceType.name}</td>
+                    <td className="py-1.5 pr-2">
+                      <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[d.status]}`}>
+                        {STATUS_LABELS[d.status]}
+                      </span>
+                    </td>
+                    <td className="py-1.5 pr-2 text-slate-600">{d.assignedUser?.fullName ?? "—"}</td>
+                    <td className="py-1.5 pr-2">
+                      <span className="inline-block rounded-full px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-800">
+                        {d.assignedUser ? EMPLOYEE_STATUS_LABELS[d.assignedUser.status] : "—"}
+                      </span>
+                    </td>
+                    <td className="py-1.5 text-slate-600">{d.location.center} / {d.location.department}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-sm font-medium text-slate-700">Active Employees Without Devices</h2>
+          <span className={`text-xs font-medium ${employeesWithoutDevices.length > 0 ? "text-amber-700" : "text-slate-500"}`}>
+            {employeesWithoutDevices.length} employee(s)
+          </span>
+        </div>
+        <form method="get" className="flex items-center justify-between gap-3 mb-3">
+          <p className="text-xs text-slate-500">
+            Active employees with no device assigned at all — check whether they are missing from device records.
+          </p>
+          <div className="flex items-center gap-2 shrink-0">
+            <select name="missingCenter" defaultValue={selectedCenter} className="rounded-md border border-slate-400 px-2 py-1 text-sm">
+              <option value="">All centers</option>
+              {centerRows.map(({ center }) => (
+                <option key={center} value={center}>{center}</option>
+              ))}
+            </select>
+            <button type="submit" className="rounded-md border border-slate-400 bg-white text-sm font-medium text-slate-900 px-3 py-1 hover:bg-slate-50">
+              Apply
+            </button>
+            {(["xlsx", "csv"] as const).map((format) => (
+              <a
+                key={format}
+                href={`/api/export/employees-without-devices?format=${format}${selectedCenter ? `&center=${encodeURIComponent(selectedCenter)}` : ""}`}
+                className="rounded-md border border-slate-400 bg-white text-sm font-medium text-slate-900 px-3 py-1 hover:bg-slate-50"
+              >
+                Export .{format}
+              </a>
+            ))}
+          </div>
+        </form>
+        {employeesWithoutDevices.length === 0 ? (
+          <p className="text-sm text-slate-500 py-4 text-center">Every active employee has at least one device.</p>
+        ) : (
+          <div className="overflow-auto max-h-80">
+            <table className="w-full text-sm">
+              <thead className="text-xs uppercase text-slate-500 sticky top-0 bg-white">
+                <tr>
+                  <th className="text-left pb-2">Employee ID</th>
+                  <th className="text-left pb-2">Name</th>
+                  <th className="text-left pb-2">Email</th>
+                  <th className="text-left pb-2">Center / Department</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {employeesWithoutDevices.map((e) => (
+                  <tr key={e.id}>
+                    <td className="py-1.5 pr-2 font-medium text-slate-900">{e.employeeId}</td>
+                    <td className="py-1.5 pr-2 text-slate-600">{e.fullName}</td>
+                    <td className="py-1.5 pr-2 text-slate-600">{e.email ?? "—"}</td>
+                    <td className="py-1.5 text-slate-600">
+                      {e.location ? `${e.location.center} / ${e.location.department}` : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       <div className="text-sm">

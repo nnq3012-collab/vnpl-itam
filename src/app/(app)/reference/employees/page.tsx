@@ -16,7 +16,10 @@ export default async function EmployeesPage() {
   }
 
   const [employees, locations] = await Promise.all([
-    prisma.employee.findMany({ include: { location: true }, orderBy: { fullName: "asc" } }),
+    prisma.employee.findMany({
+      include: { location: true, _count: { select: { devices: true } } },
+      orderBy: { fullName: "asc" },
+    }),
     prisma.location.findMany({ orderBy: [{ center: "asc" }, { department: "asc" }] }),
   ]);
 
@@ -32,6 +35,7 @@ export default async function EmployeesPage() {
           center: e.location?.center ?? null,
           department: e.location?.department ?? null,
           status: e.status,
+          deviceCount: e._count.devices,
         }))}
         locations={locations.map((l) => ({ id: l.id, center: l.center, department: l.department }))}
       />

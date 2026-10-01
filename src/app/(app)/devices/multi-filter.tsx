@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 
 /** Checkbox dropdown for the GET filter form — each checked box submits as a
- * repeated param (?name=a&name=b). Stays open while ticking; closes on an
+ * repeated param (?name=a&name=b). Pass `onChange` to use it for client-side
+ * filtering instead. Stays open while ticking; closes on an
  * outside click (including opening another filter) or Escape. The panel stays
  * mounted when closed so its checkboxes still submit with the form. */
 export default function MultiFilter({
@@ -11,11 +12,13 @@ export default function MultiFilter({
   name,
   options,
   selected,
+  onChange,
 }: {
   label: string;
   name: string;
   options: { value: string; label: string }[];
   selected: string[];
+  onChange?: (values: string[]) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [checked, setChecked] = useState(selected);
@@ -69,9 +72,11 @@ export default function MultiFilter({
               name={name}
               value={o.value}
               checked={checked.includes(o.value)}
-              onChange={(e) =>
-                setChecked((prev) => (e.target.checked ? [...prev, o.value] : prev.filter((v) => v !== o.value)))
-              }
+              onChange={(e) => {
+                const next = e.target.checked ? [...checked, o.value] : checked.filter((v) => v !== o.value);
+                setChecked(next);
+                onChange?.(next);
+              }}
               className="h-4 w-4"
             />
             {o.label}

@@ -56,7 +56,8 @@ export async function GET(request: NextRequest) {
 
   if (format === "csv") {
     const csv = XLSX.utils.sheet_to_csv(worksheet);
-    return new NextResponse(csv, {
+    // BOM so Excel opens the CSV as UTF-8 (Vietnamese names otherwise garble).
+    return new NextResponse(String.fromCharCode(0xfeff) + csv, {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
         "Content-Disposition": `attachment; filename="${filename}"`,
