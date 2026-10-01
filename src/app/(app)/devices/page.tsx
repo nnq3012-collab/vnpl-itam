@@ -7,6 +7,8 @@ import { canUseFeature } from "@/lib/feature-access";
 import SelectAllCheckbox from "./select-all";
 import BulkDeleteButton from "./bulk-delete-button";
 import BulkEditPanel from "./bulk-edit-panel";
+import MultiFilter from "./multi-filter";
+import { buildDeviceWhere } from "@/lib/device-filters";
 import ReorderableTable, { type TableColumn, type TableRow } from "@/components/reorderable-table";
 
 const STATUS_LABELS: Record<DeviceStatus, string> = {
@@ -29,17 +31,19 @@ const STATUS_BADGE: Record<DeviceStatus, string> = {
   RETIRED: "bg-slate-100 text-slate-700",
 };
 
-type SearchParams = {
-  assetId?: string;
-  status?: string;
-  center?: string;
-  department?: string;
-  deviceTypeId?: string;
-  assignedUserId?: string;
-  sort?: string;
-  dir?: string;
-  highlight?: string;
-};
+type SearchParams = { [key: string]: string | string[] | undefined };
+
+const all = (v: string | string[] | undefined) => [v ?? []].flat();
+const first = (v: string | string[] | undefined) => all(v)[0];
+
+/** Current params as a query string, keeping repeated (multi-select) values. */
+function toQuery(params: SearchParams, omit: string[]) {
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (!omit.includes(k)) all(v).forEach((x) => x && qs.append(k, x));
+  }
+  return qs;
+}
 
 function buildOrderBy(sort?: string, dir?: string): Prisma.DeviceOrderByWithRelationInput {
   const direction: Prisma.SortOrder = dir === "desc" ? "desc" : "asc";
@@ -72,33 +76,23 @@ export default async function DevicesPage({
   const canDelete = canDeleteDevices(session?.username);
   const canBulkEdit = session ? await canUseFeature(session.role, "devices.bulkEdit") : false;
 
-  const where: Prisma.DeviceWhereInput = {};
-  if (params.assetId) where.assetId = { contains: params.assetId };
-  if (params.status) {
-    const statuses = params.status.split(",") as DeviceStatus[];
-    where.status = statuses.length > 1 ? { in: statuses } : statuses[0];
-  }
-  if (params.deviceTypeId) where.deviceTypeId = params.deviceTypeId;
-  if (params.assignedUserId) {
-    where.assignedUserId = params.assignedUserId === "UNASSIGNED" ? null : params.assignedUserId;
-  }
-  if (params.center || params.department) {
-    where.location = {
-      ...(params.center ? { center: params.center } : {}),
-      ...(params.department ? { department: params.department } : {}),
-    };
-  }
+  const where = buildDeviceWhere((k) => all(params[k]));
+  const sort = first(params.sort);
+  const dir = first(params.dir);
+  const highlight = first(params.highlight);
+  const selectedStatuses = all(params.status).flatMap((s) => s.split(","));
 
-  const [devices, deviceTypes, locations, employees, vendors] = await Promise.all([
+  const [devices, deviceTypes, locations, employees, vendors, batches] = await Promise.all([
     prisma.device.findMany({
       where,
-      include: { deviceType: true, location: true, assignedUser: true, vendor: true },
-      orderBy: buildOrderBy(params.sort, params.dir),
+      include: { deviceType: true, location: true, assignedUser: true, vendor: true, batches: { orderBy: { createdAt: "asc" } } },
+      orderBy: buildOrderBy(sort, dir),
     }),
     prisma.deviceType.findMany({ orderBy: { name: "asc" } }),
     prisma.location.findMany({ orderBy: [{ center: "asc" }, { department: "asc" }] }),
     prisma.employee.findMany({ orderBy: { fullName: "asc" } }),
     prisma.vendor.findMany({ orderBy: { name: "asc" } }),
+    prisma.batch.findMany({ orderBy: { createdAt: "desc" }, include: { _count: { select: { devices: true } } } }),
   ]);
 
   const centers = Array.from(new Set(locations.map((l) => l.center))).sort();
@@ -126,27 +120,20 @@ export default async function DevicesPage({
   }
 
   function sortLink(field: string, label: string) {
-    const nextDir = params.sort === field && params.dir !== "desc" ? "desc" : "asc";
-    const qs = new URLSearchParams();
-    Object.entries(params).forEach(([k, v]) => {
-      if (v && k !== "sort" && k !== "dir") qs.set(k, v);
-    });
+    const nextDir = sort === field && dir !== "desc" ? "desc" : "asc";
+    const qs = toQuery(params, ["sort", "dir"]);
     qs.set("sort", field);
     qs.set("dir", nextDir);
-    const active = params.sort === field;
+    const active = sort === field;
     return (
       <a href={`/devices?${qs.toString()}`} className="inline-flex items-center gap-1 hover:underline">
         {label}
-        {active && <span className="text-xs">{params.dir === "desc" ? "▼" : "▲"}</span>}
+        {active && <span className="text-xs">{dir === "desc" ? "▼" : "▲"}</span>}
       </a>
     );
   }
 
-  const exportParams = new URLSearchParams();
-  Object.entries(params).forEach(([k, v]) => {
-    if (v && k !== "sort" && k !== "dir") exportParams.set(k, v);
-  });
-  const exportQuery = exportParams.toString();
+  const exportQuery = toQuery(params, ["sort", "dir"]).toString();
 
   const pinnedColumn: TableColumn = { key: "select", header: <SelectAllCheckbox /> };
 
@@ -163,6 +150,7 @@ export default async function DevicesPage({
     { key: "department", header: "Department" },
     { key: "assignedUser", header: sortLink("assignedUser", "Assigned User") },
     { key: "assignedEmail", header: "Assigned Email" },
+    { key: "batches", header: "Batch" },
     { key: "vendor", header: "Vendor" },
     { key: "price", header: "Price" },
     { key: "purchaseYear", header: "Purchase Year" },
@@ -176,7 +164,7 @@ export default async function DevicesPage({
     const depreciation = depreciationInfo(d);
     return {
       key: d.assetId,
-      rowClassName: params.highlight === d.assetId ? "bg-amber-50" : "",
+      rowClassName: highlight === d.assetId ? "bg-amber-50" : "",
       cells: {
         select: <input type="checkbox" name="assetId" value={d.assetId} className="h-4 w-4 rounded border-slate-300" />,
         assetId: (
@@ -209,6 +197,7 @@ export default async function DevicesPage({
         department: <span className="text-slate-600">{d.location.department}</span>,
         assignedUser: <span className="text-slate-600">{d.assignedUser?.fullName ?? "Unassigned"}</span>,
         assignedEmail: <span className="text-slate-600">{d.assignedUserEmail ?? "—"}</span>,
+        batches: <span className="text-slate-600 whitespace-nowrap">{d.batches.map((b) => b.name).join(", ") || "—"}</span>,
         vendor: <span className="text-slate-600">{d.vendor?.name ?? "—"}</span>,
         price: <span className="text-slate-600">{d.price != null ? Number(d.price).toLocaleString() : "—"}</span>,
         purchaseYear: <span className="text-slate-600">{d.purchaseYear ?? "—"}</span>,
@@ -257,50 +246,39 @@ export default async function DevicesPage({
           <input
             type="text"
             name="assetId"
-            defaultValue={params.assetId ?? ""}
+            defaultValue={first(params.assetId) ?? ""}
             className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
             placeholder="Search..."
           />
         </div>
-        <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">Status</label>
-          <select name="status" defaultValue={params.status ?? ""} className="rounded-md border border-slate-300 px-2 py-1.5 text-sm">
-            <option value="">All</option>
-            {Object.entries(STATUS_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">Center</label>
-          <select name="center" defaultValue={params.center ?? ""} className="rounded-md border border-slate-300 px-2 py-1.5 text-sm">
-            <option value="">All</option>
-            {centers.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">Department</label>
-          <select name="department" defaultValue={params.department ?? ""} className="rounded-md border border-slate-300 px-2 py-1.5 text-sm">
-            <option value="">All</option>
-            {departments.map((d) => (
-              <option key={d} value={d}>{d}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">Device Type</label>
-          <select name="deviceTypeId" defaultValue={params.deviceTypeId ?? ""} className="rounded-md border border-slate-300 px-2 py-1.5 text-sm">
-            <option value="">All</option>
-            {deviceTypes.map((t) => (
-              <option key={t.id} value={t.id}>{t.name}</option>
-            ))}
-          </select>
-        </div>
+        <MultiFilter
+          label="Status"
+          name="status"
+          options={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))}
+          selected={selectedStatuses}
+        />
+        <MultiFilter label="Center" name="center" options={centers.map((c) => ({ value: c, label: c }))} selected={all(params.center)} />
+        <MultiFilter
+          label="Department"
+          name="department"
+          options={departments.map((d) => ({ value: d, label: d }))}
+          selected={all(params.department)}
+        />
+        <MultiFilter
+          label="Device Type"
+          name="deviceTypeId"
+          options={deviceTypes.map((t) => ({ value: t.id, label: t.name }))}
+          selected={all(params.deviceTypeId)}
+        />
+        <MultiFilter
+          label="Batch"
+          name="batchId"
+          options={batches.map((b) => ({ value: b.id, label: `${b.name} (${b._count.devices})` }))}
+          selected={all(params.batchId)}
+        />
         <div>
           <label className="block text-xs font-medium text-slate-500 mb-1">Assigned User</label>
-          <select name="assignedUserId" defaultValue={params.assignedUserId ?? ""} className="rounded-md border border-slate-300 px-2 py-1.5 text-sm">
+          <select name="assignedUserId" defaultValue={first(params.assignedUserId) ?? ""} className="rounded-md border border-slate-300 px-2 py-1.5 text-sm">
             <option value="">All</option>
             <option value="UNASSIGNED">Unassigned</option>
             {employees.map((e) => (
@@ -322,7 +300,7 @@ export default async function DevicesPage({
           >
             Print Labels
           </button>
-          {canBulkEdit && <BulkEditPanel vendors={vendors} locations={locations} />}
+          {canBulkEdit && <BulkEditPanel vendors={vendors} locations={locations} batches={batches.map((b) => b.name)} />}
           {canDelete && <BulkDeleteButton />}
         </div>
         </form>

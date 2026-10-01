@@ -123,6 +123,14 @@ async function getStaleAssignments() {
   });
 }
 
+async function getEmployeesWithoutDevices(center?: string) {
+  return prisma.employee.findMany({
+    where: { status: EmployeeStatus.ACTIVE, devices: { none: {} }, ...(center ? { location: { center } } : {}) },
+    include: { location: true },
+    orderBy: { fullName: "asc" },
+  });
+}
+
 function StatusChips({ statusCounts }: { statusCounts: StatusCounts }) {
   const entries = (Object.entries(statusCounts) as [DeviceStatus, number][]).sort((a, b) => b[1] - a[1]);
   return (
@@ -136,12 +144,20 @@ function StatusChips({ statusCounts }: { statusCounts: StatusCounts }) {
   );
 }
 
-export default async function DashboardPage() {
-  const [counts, breakdown, typeBreakdown, staleAssignments] = await Promise.all([
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const { missingCenter } = await searchParams;
+  const selectedCenter = typeof missingCenter === "string" ? missingCenter : "";
+  const [counts, breakdown, typeBreakdown, staleAssignments, employeesWithoutDevices, centerRows] = await Promise.all([
     getStatusCounts(),
     getLocationBreakdown(),
     getDeviceTypeBreakdown(),
     getStaleAssignments(),
+    getEmployeesWithoutDevices(selectedCenter),
+    prisma.location.findMany({ distinct: ["center"], select: { center: true }, orderBy: { center: "asc" } }),
   ]);
   const grandTotal = breakdown.reduce((sum, c) => sum + c.total, 0);
 
@@ -222,6 +238,59 @@ export default async function DashboardPage() {
                       </span>
                     </td>
                     <td className="py-1.5 text-slate-600">{d.location.center} / {d.location.department}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-sm font-medium text-slate-700">Active Employees Without Devices</h2>
+          <span className={`text-xs font-medium ${employeesWithoutDevices.length > 0 ? "text-amber-700" : "text-slate-400"}`}>
+            {employeesWithoutDevices.length} employee(s)
+          </span>
+        </div>
+        <form method="get" className="flex items-center justify-between gap-3 mb-3">
+          <p className="text-xs text-slate-400">
+            Active employees with no device assigned at all — check whether they are missing from device records.
+          </p>
+          <div className="flex items-center gap-2 shrink-0">
+            <select name="missingCenter" defaultValue={selectedCenter} className="rounded-md border border-slate-300 px-2 py-1 text-sm">
+              <option value="">All centers</option>
+              {centerRows.map(({ center }) => (
+                <option key={center} value={center}>{center}</option>
+              ))}
+            </select>
+            <button type="submit" className="rounded-md border border-slate-300 text-sm font-medium px-3 py-1 hover:bg-slate-50">
+              Apply
+            </button>
+          </div>
+        </form>
+        {employeesWithoutDevices.length === 0 ? (
+          <p className="text-sm text-slate-400 py-4 text-center">Every active employee has at least one device.</p>
+        ) : (
+          <div className="overflow-auto max-h-80">
+            <table className="w-full text-sm">
+              <thead className="text-xs uppercase text-slate-500 sticky top-0 bg-white">
+                <tr>
+                  <th className="text-left pb-2">Employee ID</th>
+                  <th className="text-left pb-2">Name</th>
+                  <th className="text-left pb-2">Email</th>
+                  <th className="text-left pb-2">Center / Department</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {employeesWithoutDevices.map((e) => (
+                  <tr key={e.id}>
+                    <td className="py-1.5 pr-2 font-medium text-slate-900">{e.employeeId}</td>
+                    <td className="py-1.5 pr-2 text-slate-600">{e.fullName}</td>
+                    <td className="py-1.5 pr-2 text-slate-600">{e.email ?? "—"}</td>
+                    <td className="py-1.5 text-slate-600">
+                      {e.location ? `${e.location.center} / ${e.location.department}` : "—"}
+                    </td>
                   </tr>
                 ))}
               </tbody>

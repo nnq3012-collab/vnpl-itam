@@ -33,7 +33,7 @@ export const FEATURES: FeatureDefinition[] = [
   {
     key: "devices.bulkEdit",
     label: "Bulk Edit Devices",
-    description: "Apply the same Status, Make/Model, Location, Vendor, Price, or Purchase Year change to many selected devices at once.",
+    description: "Apply the same Status, Make/Model, Location, Vendor, Price, or Purchase Year change — or add/remove a Batch — on many selected devices at once.",
     defaultRoles: ["IT"],
   },
   {

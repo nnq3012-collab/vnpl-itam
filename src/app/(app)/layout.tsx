@@ -26,6 +26,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const devicesGroup = [
     { href: "/devices", label: "Device Master" },
     { href: "/logs/allocation", label: "Allocation & Return Log" },
+    { href: "/batches", label: "Batches" },
   ];
   const actionsGroup = [
     ...(canRegister ? [{ href: "/devices/new", label: "Register Device" }] : []),

@@ -40,6 +40,7 @@ enum AuditAction {
   HARDWARE_CHANGE
   BULK_IMPORT
   MAINTENANCE
+  BATCH
 }
 
 model User {
@@ -131,11 +132,21 @@ model Device {
   vendorId           String?
   dateRegistered     DateTime     @default(now())
   lastUpdated        DateTime     @updatedAt
+  batches            Batch[]
 
   @@index([status])
   @@index([locationId])
   @@index([assignedUserId])
   @@index([vendorId])
+}
+
+// A named work batch (e.g. "2026-10 RAM upgrade", "Oct repair run"). A
+// device can sit in several batches over its life, so this is many-to-many.
+model Batch {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  devices   Device[]
 }
 
 // Immutable history. AssetId/operator are plain strings (not FKs) so entries

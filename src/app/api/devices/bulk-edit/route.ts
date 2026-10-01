@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Select at least one device" }, { status: 400 });
   }
 
-  const fieldsInBody = ["status", "makeModel", "center", "department", "vendorId", "price", "purchaseYear"].filter(
+  const fieldsInBody = ["status", "makeModel", "center", "department", "vendorId", "price", "purchaseYear", "batchName"].filter(
     (f) => f in body
   );
   if (fieldsInBody.length === 0) {
@@ -64,9 +64,21 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // Batch: "add" creates the batch on first use; "remove" needs it to exist.
+  let batch: { id: string; name: string } | null = null;
+  const batchRemove = body.batchMode === "remove";
+  if ("batchName" in body) {
+    const batchName = typeof body.batchName === "string" ? body.batchName.trim() : "";
+    if (!batchName) return NextResponse.json({ error: "Batch name is required" }, { status: 400 });
+    batch = batchRemove
+      ? await prisma.batch.findUnique({ where: { name: batchName } })
+      : await prisma.batch.upsert({ where: { name: batchName }, update: {}, create: { name: batchName } });
+    if (!batch) return NextResponse.json({ error: `No batch named "${batchName}"` }, { status: 400 });
+  }
+
   const devices = await prisma.device.findMany({
     where: { assetId: { in: assetIds } },
-    include: { deviceType: true, location: true, assignedUser: true, vendor: true },
+    include: { deviceType: true, location: true, assignedUser: true, vendor: true, batches: { select: { id: true } } },
   });
   if (devices.length === 0) {
     return NextResponse.json({ error: "No matching devices found" }, { status: 404 });
@@ -115,6 +127,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (batch) {
+      const inBatch = device.batches.some((b) => b.id === batch.id);
+      if (batchRemove && inBatch) {
+        deviceUpdate.batches = { disconnect: { id: batch.id } };
+        changes.push(`Batch: removed from ${batch.name}`);
+      } else if (!batchRemove && !inBatch) {
+        deviceUpdate.batches = { connect: { id: batch.id } };
+        changes.push(`Batch: added to ${batch.name}`);
+      }
+    }
+
     if (changes.length === 0) continue;
     changedCount += 1;
 
@@ -128,6 +151,7 @@ export async function POST(request: NextRequest) {
     let action: AuditAction = AuditAction.LIFECYCLE_UPDATE;
     if ("status" in deviceUpdate) action = AuditAction.LIFECYCLE_UPDATE;
     else if ("makeModel" in deviceUpdate) action = AuditAction.HARDWARE_CHANGE;
+    else if (Object.keys(deviceUpdate).length === 1 && "batches" in deviceUpdate) action = AuditAction.BATCH;
 
     auditOperations.push(
       prisma.auditLog.create({

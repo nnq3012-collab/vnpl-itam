@@ -17,7 +17,15 @@ function getSelectedAssetIds(): string[] {
   return Array.from(checked).map((cb) => cb.value);
 }
 
-export default function BulkEditPanel({ vendors, locations }: { vendors: Vendor[]; locations: Location[] }) {
+export default function BulkEditPanel({
+  vendors,
+  locations,
+  batches,
+}: {
+  vendors: Vendor[];
+  locations: Location[];
+  batches: string[];
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [assetIds, setAssetIds] = useState<string[]>([]);
@@ -42,6 +50,10 @@ export default function BulkEditPanel({ vendors, locations }: { vendors: Vendor[
   const [usePurchaseYear, setUsePurchaseYear] = useState(false);
   const [purchaseYear, setPurchaseYear] = useState("");
 
+  const [useBatch, setUseBatch] = useState(false);
+  const [batchMode, setBatchMode] = useState<"add" | "remove">("add");
+  const [batchName, setBatchName] = useState("");
+
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -61,7 +73,7 @@ export default function BulkEditPanel({ vendors, locations }: { vendors: Vendor[
     setOpen(true);
   }
 
-  const anyFieldSelected = useStatus || useMakeModel || useLocation || useVendor || usePrice || usePurchaseYear;
+  const anyFieldSelected = useStatus || useMakeModel || useLocation || useVendor || usePrice || usePurchaseYear || useBatch;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -74,6 +86,10 @@ export default function BulkEditPanel({ vendors, locations }: { vendors: Vendor[
     }
     if (useLocation && (!center || !department)) {
       setError("Pick both Center and Department, or turn off Location.");
+      return;
+    }
+    if (useBatch && !batchName.trim()) {
+      setError("Enter a batch name, or turn off Batch.");
       return;
     }
     if (!confirm(`Apply these changes to ${assetIds.length} device(s)? This affects them all at once.`)) return;
@@ -91,6 +107,10 @@ export default function BulkEditPanel({ vendors, locations }: { vendors: Vendor[
     if (useVendor) payload.vendorId = vendorId || null;
     if (usePrice) payload.price = price ? Number(price) : null;
     if (usePurchaseYear) payload.purchaseYear = purchaseYear ? Number(purchaseYear) : null;
+    if (useBatch) {
+      payload.batchName = batchName.trim();
+      payload.batchMode = batchMode;
+    }
 
     setSubmitting(true);
     try {
@@ -214,6 +234,31 @@ export default function BulkEditPanel({ vendors, locations }: { vendors: Vendor[
                   onChange={(e) => setPurchaseYear(e.target.value)}
                   className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
                 />
+              </FieldToggle>
+
+              <FieldToggle label="Batch" checked={useBatch} onChange={setUseBatch}>
+                <div className="grid grid-cols-[auto_1fr] gap-2">
+                  <select
+                    value={batchMode}
+                    onChange={(e) => setBatchMode(e.target.value as "add" | "remove")}
+                    className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  >
+                    <option value="add">Add to</option>
+                    <option value="remove">Remove from</option>
+                  </select>
+                  <input
+                    type="text"
+                    list="batch-names"
+                    value={batchName}
+                    onChange={(e) => setBatchName(e.target.value)}
+                    placeholder="e.g. 2026-10 RAM upgrade"
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  />
+                  <datalist id="batch-names">
+                    {batches.map((b) => <option key={b} value={b} />)}
+                  </datalist>
+                </div>
+                <p className="mt-1 text-xs text-slate-400">Pick an existing batch or type a new name to create it.</p>
               </FieldToggle>
 
               {error && <p className="text-sm text-red-600">{error}</p>}

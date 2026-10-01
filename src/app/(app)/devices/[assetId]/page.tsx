@@ -17,7 +17,7 @@ export default async function DeviceDetailPage({
   const { assetId } = await params;
   const device = await prisma.device.findUnique({
     where: { assetId },
-    include: { deviceType: true, location: true, assignedUser: true, vendor: true },
+    include: { deviceType: true, location: true, assignedUser: true, vendor: true, batches: { orderBy: { createdAt: "asc" } } },
   });
   if (!device) notFound();
 
@@ -60,6 +60,7 @@ export default async function DeviceDetailPage({
         <Field label="Department" value={device.location.department} />
         <Field label="Assigned User" value={device.assignedUser?.fullName ?? "Unassigned"} />
         <Field label="Assigned Email" value={device.assignedUserEmail} />
+        <Field label="Batch" value={device.batches.map((b) => b.name).join(", ") || null} />
         <Field label="Vendor" value={device.vendor?.name} />
         <Field label="Price" value={device.price != null ? Number(device.price).toLocaleString() : null} />
         <Field label="Purchase Year" value={device.purchaseYear?.toString()} />

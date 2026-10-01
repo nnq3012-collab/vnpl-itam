@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
-import { DeviceStatus, Prisma } from "@prisma/client";
+import { DeviceStatus } from "@prisma/client";
+import { buildDeviceWhere } from "@/lib/device-filters";
 import * as XLSX from "xlsx";
 
 const STATUS_LABELS: Record<DeviceStatus, string> = {
@@ -21,25 +22,11 @@ export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
   const format = params.get("format") === "csv" ? "csv" : "xlsx";
 
-  const where: Prisma.DeviceWhereInput = {};
-  const assetId = params.get("assetId");
-  const status = params.get("status");
-  const center = params.get("center");
-  const department = params.get("department");
-  const deviceTypeId = params.get("deviceTypeId");
-  const assignedUserId = params.get("assignedUserId");
-
-  if (assetId) where.assetId = { contains: assetId };
-  if (status) where.status = status as DeviceStatus;
-  if (deviceTypeId) where.deviceTypeId = deviceTypeId;
-  if (assignedUserId) where.assignedUserId = assignedUserId === "UNASSIGNED" ? null : assignedUserId;
-  if (center || department) {
-    where.location = { ...(center ? { center } : {}), ...(department ? { department } : {}) };
-  }
+  const where = buildDeviceWhere((k) => params.getAll(k));
 
   const devices = await prisma.device.findMany({
     where,
-    include: { deviceType: true, location: true, assignedUser: true, vendor: true },
+    include: { deviceType: true, location: true, assignedUser: true, vendor: true, batches: true },
     orderBy: { assetId: "asc" },
   });
 
@@ -56,6 +43,7 @@ export async function GET(request: NextRequest) {
     Department: d.location.department,
     "Assigned User": d.assignedUser?.fullName ?? "Unassigned",
     "Assigned Email": d.assignedUserEmail ?? "",
+    Batch: d.batches.map((b) => b.name).join(", "),
     Vendor: d.vendor?.name ?? "",
     Price: d.price != null ? Number(d.price) : "",
     "Purchase Year": d.purchaseYear ?? "",
