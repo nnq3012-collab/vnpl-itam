@@ -15,7 +15,7 @@ export type TableRow = {
 
 function DragHandleIcon() {
   return (
-    <svg viewBox="0 0 16 16" width="10" height="10" fill="currentColor" className="text-slate-400 shrink-0">
+    <svg viewBox="0 0 16 16" width="10" height="10" fill="currentColor" className="text-slate-500 shrink-0">
       <circle cx="5" cy="3" r="1.3" />
       <circle cx="11" cy="3" r="1.3" />
       <circle cx="5" cy="8" r="1.3" />
@@ -92,13 +92,13 @@ export default function ReorderableTable({
   return (
     <>
       <div className="flex items-center justify-between px-4 py-2 border-b border-slate-100">
-        <span className="text-xs text-slate-400">
+        <span className="text-xs text-slate-500">
           {hint ? `${hint} ` : ""}Drag a column header to reorder columns.
         </span>
         <button
           type="button"
           onClick={resetOrder}
-          className="text-xs text-slate-400 hover:text-slate-700"
+          className="text-xs text-slate-500 hover:text-slate-700"
         >
           Reset column order
         </button>
@@ -138,7 +138,7 @@ export default function ReorderableTable({
           ))}
           {rows.length === 0 && (
             <tr>
-              <td colSpan={colSpan} className="px-4 py-8 text-center text-slate-400">
+              <td colSpan={colSpan} className="px-4 py-8 text-center text-slate-500">
                 {emptyMessage}
               </td>
             </tr>

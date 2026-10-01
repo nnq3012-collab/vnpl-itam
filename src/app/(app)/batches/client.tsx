@@ -61,7 +61,7 @@ export default function BatchesClient({ batches, canManage }: { batches: Batch[]
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="e.g. 2026-Q4 Renovation – Branch A"
-                className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+                className="w-full rounded-md border border-slate-400 px-3 py-1.5 text-sm"
                 required
               />
             </div>
@@ -93,7 +93,7 @@ export default function BatchesClient({ batches, canManage }: { batches: Batch[]
                     onChange={(e) => setEditingName(e.target.value)}
                     onBlur={() => saveName(item)}
                     onKeyDown={(e) => e.key === "Enter" && saveName(item)}
-                    className="rounded-md border border-slate-300 px-2 py-1 text-sm"
+                    className="rounded-md border border-slate-400 px-2 py-1 text-sm"
                   />
                 ) : canManage ? (
                   <button
@@ -117,7 +117,7 @@ export default function BatchesClient({ batches, canManage }: { batches: Batch[]
                   View devices
                 </Link>
                 {canManage && (
-                  <button onClick={() => handleDelete(item)} className="ml-3 text-xs text-red-500 hover:text-red-700">
+                  <button onClick={() => handleDelete(item)} className="ml-3 text-xs text-red-600 hover:text-red-700">
                     Delete
                   </button>
                 )}
@@ -126,7 +126,7 @@ export default function BatchesClient({ batches, canManage }: { batches: Batch[]
           ))}
           {batches.length === 0 && (
             <tr>
-              <td colSpan={5} className="py-6 text-center text-slate-400">
+              <td colSpan={5} className="py-6 text-center text-slate-500">
                 No batches yet.
               </td>
             </tr>
@@ -134,7 +134,7 @@ export default function BatchesClient({ batches, canManage }: { batches: Batch[]
         </tbody>
       </table>
 
-      <p className="text-xs text-slate-400">
+      <p className="text-xs text-slate-500">
         {canManage && "Click a name to rename it. "}Add devices to a batch from Device Master → select devices → Bulk Edit → Batch.
       </p>
     </div>

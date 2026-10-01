@@ -139,23 +139,23 @@ export default function EmployeesClient({ initial, locations }: { initial: Emplo
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Employee ID</label>
             <input value={newForm.employeeId} onChange={(e) => setNewForm({ ...newForm, employeeId: e.target.value })}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm" required />
+              className="w-full rounded-md border border-slate-400 px-2 py-1.5 text-sm" required />
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Full Name</label>
             <input value={newForm.fullName} onChange={(e) => setNewForm({ ...newForm, fullName: e.target.value })}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm" required />
+              className="w-full rounded-md border border-slate-400 px-2 py-1.5 text-sm" required />
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Email</label>
             <input value={newForm.email} onChange={(e) => setNewForm({ ...newForm, email: e.target.value })}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
+              className="w-full rounded-md border border-slate-400 px-2 py-1.5 text-sm" />
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Center</label>
             <select value={newForm.center}
               onChange={(e) => setNewForm({ ...newForm, center: e.target.value, department: "" })}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm">
+              className="w-full rounded-md border border-slate-400 px-2 py-1.5 text-sm">
               <option value="">—</option>
               {centers.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
@@ -165,7 +165,7 @@ export default function EmployeesClient({ initial, locations }: { initial: Emplo
             <select value={newForm.department}
               onChange={(e) => setNewForm({ ...newForm, department: e.target.value })}
               disabled={!newForm.center}
-              className="w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm disabled:bg-slate-50">
+              className="w-full rounded-md border border-slate-400 px-2 py-1.5 text-sm disabled:bg-slate-50">
               <option value="">—</option>
               {departmentsFor(newForm.center).map((d) => <option key={d} value={d}>{d}</option>)}
             </select>
@@ -183,7 +183,7 @@ export default function EmployeesClient({ initial, locations }: { initial: Emplo
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search by name, employee ID, or email..."
-        className="w-full max-w-sm rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+        className="w-full max-w-sm rounded-md border border-slate-400 px-3 py-1.5 text-sm"
       />
 
       <div className="overflow-x-auto">
@@ -206,20 +206,20 @@ export default function EmployeesClient({ initial, locations }: { initial: Emplo
                   <>
                     <td className="py-2 pr-2">
                       <input value={editForm.employeeId} onChange={(e) => setEditForm({ ...editForm, employeeId: e.target.value })}
-                        className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm" />
+                        className="w-full rounded-md border border-slate-400 px-2 py-1 text-sm" />
                     </td>
                     <td className="py-2 pr-2">
                       <input value={editForm.fullName} onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
-                        className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm" />
+                        className="w-full rounded-md border border-slate-400 px-2 py-1 text-sm" />
                     </td>
                     <td className="py-2 pr-2">
                       <input value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                        className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm" />
+                        className="w-full rounded-md border border-slate-400 px-2 py-1 text-sm" />
                     </td>
                     <td className="py-2 pr-2">
                       <select value={editForm.center}
                         onChange={(e) => setEditForm({ ...editForm, center: e.target.value, department: "" })}
-                        className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm">
+                        className="w-full rounded-md border border-slate-400 px-2 py-1 text-sm">
                         <option value="">—</option>
                         {centers.map((c) => <option key={c} value={c}>{c}</option>)}
                       </select>
@@ -228,14 +228,14 @@ export default function EmployeesClient({ initial, locations }: { initial: Emplo
                       <select value={editForm.department}
                         onChange={(e) => setEditForm({ ...editForm, department: e.target.value })}
                         disabled={!editForm.center}
-                        className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm disabled:bg-slate-50">
+                        className="w-full rounded-md border border-slate-400 px-2 py-1 text-sm disabled:bg-slate-50">
                         <option value="">—</option>
                         {departmentsFor(editForm.center).map((d) => <option key={d} value={d}>{d}</option>)}
                       </select>
                     </td>
                     <td className="py-2 pr-2">
                       <select value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                        className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm">
+                        className="w-full rounded-md border border-slate-400 px-2 py-1 text-sm">
                         {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
                       </select>
                     </td>
@@ -249,7 +249,7 @@ export default function EmployeesClient({ initial, locations }: { initial: Emplo
                     <td className="py-2 pr-2 text-slate-600">{item.employeeId}</td>
                     <td className="py-2 pr-2 text-slate-900">
                       {item.fullName}
-                      {needsReview(item) && <span className="text-amber-600 font-semibold ml-1" title="Missing or unclear Center/Department">*</span>}
+                      {needsReview(item) && <span className="text-amber-700 font-semibold ml-1" title="Missing or unclear Center/Department">*</span>}
                     </td>
                     <td className="py-2 pr-2 text-slate-600">{item.email ?? "—"}</td>
                     <td className={`py-2 pr-2 ${needsReview(item) ? "text-amber-700 font-medium" : "text-slate-600"}`}>{item.center ?? "—"}</td>
@@ -257,7 +257,7 @@ export default function EmployeesClient({ initial, locations }: { initial: Emplo
                     <td className="py-2 pr-2 text-slate-600">{item.status}</td>
                     <td className="py-2 text-right whitespace-nowrap">
                       <button onClick={() => startEdit(item)} className="text-xs text-slate-500 hover:text-slate-800 mr-3">Edit</button>
-                      <button onClick={() => handleDelete(item)} className="text-xs text-red-500 hover:text-red-700">Delete</button>
+                      <button onClick={() => handleDelete(item)} className="text-xs text-red-600 hover:text-red-700">Delete</button>
                     </td>
                   </>
                 )}

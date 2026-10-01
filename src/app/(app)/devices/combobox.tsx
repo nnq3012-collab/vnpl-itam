@@ -62,7 +62,7 @@ export default function Combobox({
           setOpen(true);
         }}
         placeholder={placeholder ?? "Type to search..."}
-        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
       {open && (
         <ul className="absolute z-10 mt-1 w-full max-h-56 overflow-auto rounded-md border border-slate-200 bg-white shadow-lg text-sm">
@@ -89,11 +89,11 @@ export default function Combobox({
               className="px-3 py-2 hover:bg-slate-50 cursor-pointer"
             >
               <div className="font-medium text-slate-900">{o.label}</div>
-              {o.sublabel && <div className="text-xs text-slate-400">{o.sublabel}</div>}
+              {o.sublabel && <div className="text-xs text-slate-500">{o.sublabel}</div>}
             </li>
           ))}
           {filtered.length === 0 && (
-            <li className="px-3 py-2 text-slate-400">No matches</li>
+            <li className="px-3 py-2 text-slate-500">No matches</li>
           )}
         </ul>
       )}

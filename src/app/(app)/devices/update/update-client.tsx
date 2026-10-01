@@ -72,7 +72,7 @@ export default function UpdateDeviceClient({
           onChange={setSelectedAssetDeviceId}
           placeholder="Type an Asset ID to search existing devices..."
         />
-        <p className="text-xs text-slate-400 mt-2">
+        <p className="text-xs text-slate-500 mt-2">
           Only existing, registered devices appear here — this confirms the Asset ID you pick is valid.
         </p>
       </div>
@@ -221,7 +221,7 @@ function EditForm({
           value={deviceTypeId}
           onChange={(e) => setDeviceTypeId(e.target.value)}
           disabled={!isIT}
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500"
+          className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500"
         >
           {deviceTypes.map((t) => (
             <option key={t.id} value={t.id}>{t.name}</option>
@@ -236,7 +236,7 @@ function EditForm({
           value={makeModel}
           onChange={(e) => setMakeModel(e.target.value)}
           disabled={!isIT}
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500"
+          className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500"
         />
       </div>
 
@@ -245,17 +245,17 @@ function EditForm({
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">CPU</label>
             <input type="text" value={cpu} onChange={(e) => setCpu(e.target.value)} disabled={!isIT}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500" />
+              className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500" />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">RAM</label>
             <input type="text" value={ram} onChange={(e) => setRam(e.target.value)} disabled={!isIT}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500" />
+              className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500" />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Storage</label>
             <input type="text" value={storage} onChange={(e) => setStorage(e.target.value)} disabled={!isIT}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500" />
+              className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500" />
           </div>
         </div>
       )}
@@ -267,7 +267,7 @@ function EditForm({
           value={serialNumber}
           onChange={(e) => setSerialNumber(e.target.value)}
           disabled={!isIT}
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500"
+          className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500"
         />
       </div>
 
@@ -277,7 +277,7 @@ function EditForm({
           value={status}
           onChange={(e) => setStatus(e.target.value)}
           disabled={!isIT}
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500"
+          className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500"
         >
           {STATUS_OPTIONS.map((s) => (
             <option key={s} value={s}>{s}</option>
@@ -293,7 +293,7 @@ function EditForm({
           <textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm"
             rows={2}
             required
           />
@@ -307,7 +307,7 @@ function EditForm({
             value={center}
             onChange={(e) => { setCenter(e.target.value); setDepartment(""); }}
             disabled={!isIT}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500"
+            className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500"
           >
             {!isIT && <option value={center}>{center}</option>}
             {isIT && centers.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -319,7 +319,7 @@ function EditForm({
             value={department}
             onChange={(e) => setDepartment(e.target.value)}
             disabled={!isIT}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500"
+            className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500"
           >
             {!isIT && <option value={department}>{department}</option>}
             {isIT && departmentsForCenter.map((d) => <option key={d} value={d}>{d}</option>)}
@@ -334,7 +334,7 @@ function EditForm({
             value={vendorId}
             onChange={(e) => setVendorId(e.target.value)}
             disabled={!isIT}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500"
+            className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500"
           >
             <option value="">Select...</option>
             {vendors.map((v) => (
@@ -351,7 +351,7 @@ function EditForm({
             value={price}
             onChange={(e) => setPrice(e.target.value)}
             disabled={!isIT}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500"
+            className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500"
           />
         </div>
         <div>
@@ -363,7 +363,7 @@ function EditForm({
             value={purchaseYear}
             onChange={(e) => setPurchaseYear(e.target.value)}
             disabled={!isIT}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500"
+            className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500"
           />
         </div>
       </div>
@@ -399,7 +399,7 @@ function EditForm({
           <select
             value={employeeStatus}
             onChange={(e) => setEmployeeStatus(e.target.value)}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm"
           >
             {EMPLOYEE_STATUS_OPTIONS.map((s) => (
               <option key={s} value={s}>{s}</option>
@@ -409,7 +409,7 @@ function EditForm({
       )}
 
       {error && <p className="text-sm text-red-600">{error}</p>}
-      {success && <p className="text-sm text-green-600">{success}</p>}
+      {success && <p className="text-sm text-green-700">{success}</p>}
 
       <button
         type="submit"
@@ -423,7 +423,7 @@ function EditForm({
     {isIT && (
       <details className="bg-white rounded-lg shadow p-4 group">
         <summary className="text-sm font-medium text-slate-700 cursor-pointer select-none list-none flex items-center gap-1.5">
-          <span className="text-slate-400 transition-transform group-open:rotate-90">▶</span>
+          <span className="text-slate-500 transition-transform group-open:rotate-90">▶</span>
           Log Maintenance Event
         </summary>
         <div className="mt-3">

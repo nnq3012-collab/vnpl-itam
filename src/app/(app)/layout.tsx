@@ -54,7 +54,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-slate-500">
-              {session.fullName} <span className="text-slate-400">({session.role})</span>
+              {session.fullName} <span className="text-slate-500">({session.role})</span>
             </span>
             <AdminMenu showConfiguration={canConfigure} />
           </div>

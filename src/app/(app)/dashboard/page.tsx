@@ -195,15 +195,15 @@ export default async function DashboardPage({
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-sm font-medium text-slate-700">Active Devices Linked to Inactive Employees</h2>
-          <span className={`text-xs font-medium ${staleAssignments.length > 0 ? "text-amber-700" : "text-slate-400"}`}>
+          <span className={`text-xs font-medium ${staleAssignments.length > 0 ? "text-amber-700" : "text-slate-500"}`}>
             {staleAssignments.length} device(s)
           </span>
         </div>
-        <p className="text-xs text-slate-400 mb-3">
+        <p className="text-xs text-slate-500 mb-3">
           Non-retired devices still assigned to an employee marked Resigned or Transferred — reassign or return these.
         </p>
         {staleAssignments.length === 0 ? (
-          <p className="text-sm text-slate-400 py-4 text-center">All assigned devices belong to active employees.</p>
+          <p className="text-sm text-slate-500 py-4 text-center">All assigned devices belong to active employees.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -249,28 +249,28 @@ export default async function DashboardPage({
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-sm font-medium text-slate-700">Active Employees Without Devices</h2>
-          <span className={`text-xs font-medium ${employeesWithoutDevices.length > 0 ? "text-amber-700" : "text-slate-400"}`}>
+          <span className={`text-xs font-medium ${employeesWithoutDevices.length > 0 ? "text-amber-700" : "text-slate-500"}`}>
             {employeesWithoutDevices.length} employee(s)
           </span>
         </div>
         <form method="get" className="flex items-center justify-between gap-3 mb-3">
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-500">
             Active employees with no device assigned at all — check whether they are missing from device records.
           </p>
           <div className="flex items-center gap-2 shrink-0">
-            <select name="missingCenter" defaultValue={selectedCenter} className="rounded-md border border-slate-300 px-2 py-1 text-sm">
+            <select name="missingCenter" defaultValue={selectedCenter} className="rounded-md border border-slate-400 px-2 py-1 text-sm">
               <option value="">All centers</option>
               {centerRows.map(({ center }) => (
                 <option key={center} value={center}>{center}</option>
               ))}
             </select>
-            <button type="submit" className="rounded-md border border-slate-300 text-sm font-medium px-3 py-1 hover:bg-slate-50">
+            <button type="submit" className="rounded-md border border-slate-400 bg-white text-sm font-medium text-slate-900 px-3 py-1 hover:bg-slate-50">
               Apply
             </button>
           </div>
         </form>
         {employeesWithoutDevices.length === 0 ? (
-          <p className="text-sm text-slate-400 py-4 text-center">Every active employee has at least one device.</p>
+          <p className="text-sm text-slate-500 py-4 text-center">Every active employee has at least one device.</p>
         ) : (
           <div className="overflow-auto max-h-80">
             <table className="w-full text-sm">
@@ -302,7 +302,7 @@ export default async function DashboardPage({
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-medium text-slate-700">Devices by Center &amp; Department</h2>
-          <span className="text-xs text-slate-400">{grandTotal} device(s) total</span>
+          <span className="text-xs text-slate-500">{grandTotal} device(s) total</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -349,7 +349,7 @@ export default async function DashboardPage({
               ))}
               {breakdown.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="py-6 text-center text-slate-400">
+                  <td colSpan={4} className="py-6 text-center text-slate-500">
                     No devices registered yet.
                   </td>
                 </tr>
@@ -362,7 +362,7 @@ export default async function DashboardPage({
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-medium text-slate-700">Devices by Type</h2>
-          <span className="text-xs text-slate-400">{typeBreakdown.length} type(s)</span>
+          <span className="text-xs text-slate-500">{typeBreakdown.length} type(s)</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -389,7 +389,7 @@ export default async function DashboardPage({
               ))}
               {typeBreakdown.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="py-6 text-center text-slate-400">
+                  <td colSpan={3} className="py-6 text-center text-slate-500">
                     No devices registered yet.
                   </td>
                 </tr>

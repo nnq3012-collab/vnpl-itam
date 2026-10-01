@@ -62,7 +62,7 @@ export default function MaintenanceForm({
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
-          className="rounded-md border border-slate-300 px-2 py-2 text-sm text-slate-700 shrink-0"
+          className="rounded-md border border-slate-400 px-2 py-2 text-sm text-slate-700 shrink-0"
         >
           <option value="">No category</option>
           {MAINTENANCE_CATEGORIES.map((c) => (
@@ -74,7 +74,7 @@ export default function MaintenanceForm({
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="e.g. Replaced battery, cleaned fan"
-          className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm min-w-0"
+          className="flex-1 rounded-md border border-slate-400 px-3 py-2 text-sm min-w-0"
           required
         />
         <button
@@ -86,7 +86,7 @@ export default function MaintenanceForm({
         </button>
       </div>
       {error && <p className="text-sm text-red-600">{error}</p>}
-      {success && <p className="text-sm text-green-600">{success}</p>}
+      {success && <p className="text-sm text-green-700">{success}</p>}
     </form>
   );
 }

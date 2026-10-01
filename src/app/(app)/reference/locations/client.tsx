@@ -70,12 +70,12 @@ export default function LocationsClient({ initial }: { initial: Location[] }) {
           <div className="flex-1">
             <label className="block text-xs font-medium text-slate-500 mb-1">Center</label>
             <input type="text" value={newCenter} onChange={(e) => setNewCenter(e.target.value)}
-              className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" required />
+              className="w-full rounded-md border border-slate-400 px-3 py-1.5 text-sm" required />
           </div>
           <div className="flex-1">
             <label className="block text-xs font-medium text-slate-500 mb-1">Department</label>
             <input type="text" value={newDepartment} onChange={(e) => setNewDepartment(e.target.value)}
-              className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm" required />
+              className="w-full rounded-md border border-slate-400 px-3 py-1.5 text-sm" required />
           </div>
           <button type="submit" className="rounded-md bg-blue-600 text-white text-sm font-medium px-4 py-1.5 hover:bg-blue-700">
             Add
@@ -98,11 +98,11 @@ export default function LocationsClient({ initial }: { initial: Location[] }) {
                 <>
                   <td className="py-2 pr-2">
                     <input value={editCenter} onChange={(e) => setEditCenter(e.target.value)}
-                      className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm" />
+                      className="w-full rounded-md border border-slate-400 px-2 py-1 text-sm" />
                   </td>
                   <td className="py-2 pr-2">
                     <input value={editDepartment} onChange={(e) => setEditDepartment(e.target.value)}
-                      className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm" />
+                      className="w-full rounded-md border border-slate-400 px-2 py-1 text-sm" />
                   </td>
                   <td className="py-2 text-right whitespace-nowrap">
                     <button onClick={() => saveEdit(item)} className="text-xs text-blue-600 hover:underline mr-3">Save</button>
@@ -115,7 +115,7 @@ export default function LocationsClient({ initial }: { initial: Location[] }) {
                   <td className="py-2 pr-2 text-slate-600">{item.department}</td>
                   <td className="py-2 text-right whitespace-nowrap">
                     <button onClick={() => startEdit(item)} className="text-xs text-slate-500 hover:text-slate-800 mr-3">Edit</button>
-                    <button onClick={() => handleDelete(item)} className="text-xs text-red-500 hover:text-red-700">Delete</button>
+                    <button onClick={() => handleDelete(item)} className="text-xs text-red-600 hover:text-red-700">Delete</button>
                   </td>
                 </>
               )}

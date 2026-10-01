@@ -61,7 +61,7 @@ export default function VendorsClient({ initial }: { initial: Vendor[] }) {
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder="e.g. Dell"
-              className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+              className="w-full rounded-md border border-slate-400 px-3 py-1.5 text-sm"
               required
             />
           </div>
@@ -89,7 +89,7 @@ export default function VendorsClient({ initial }: { initial: Vendor[] }) {
                     onChange={(e) => setEditingName(e.target.value)}
                     onBlur={() => saveName(item)}
                     onKeyDown={(e) => e.key === "Enter" && saveName(item)}
-                    className="rounded-md border border-slate-300 px-2 py-1 text-sm"
+                    className="rounded-md border border-slate-400 px-2 py-1 text-sm"
                   />
                 ) : (
                   <button
@@ -104,7 +104,7 @@ export default function VendorsClient({ initial }: { initial: Vendor[] }) {
                 )}
               </td>
               <td className="py-2 text-right">
-                <button onClick={() => handleDelete(item)} className="text-xs text-red-500 hover:text-red-700">
+                <button onClick={() => handleDelete(item)} className="text-xs text-red-600 hover:text-red-700">
                   Delete
                 </button>
               </td>
@@ -113,7 +113,7 @@ export default function VendorsClient({ initial }: { initial: Vendor[] }) {
         </tbody>
       </table>
 
-      <p className="text-xs text-slate-400">Click a name to rename it.</p>
+      <p className="text-xs text-slate-500">Click a name to rename it.</p>
     </div>
   );
 }

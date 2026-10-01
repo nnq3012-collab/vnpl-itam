@@ -58,7 +58,7 @@ export default function ConfigurationClient({ initial }: { initial: Feature[] })
                   checked={feature.roles.includes(r.value)}
                   disabled={savingKey === feature.key}
                   onChange={() => toggleRole(feature, r.value)}
-                  className="h-4 w-4 rounded border-slate-300"
+                  className="h-4 w-4 rounded border-slate-400"
                 />
                 {r.label}
               </label>

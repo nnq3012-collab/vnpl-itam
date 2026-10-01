@@ -141,7 +141,7 @@ export default function BulkEditPanel({
       <button
         type="button"
         onClick={handleOpen}
-        className="rounded-md border border-slate-300 bg-white text-sm font-medium text-slate-900 px-4 py-1.5 hover:bg-slate-50"
+        className="rounded-md border border-slate-400 bg-white text-sm font-medium text-slate-900 px-4 py-1.5 hover:bg-slate-50"
       >
         Bulk Edit
       </button>
@@ -151,7 +151,7 @@ export default function BulkEditPanel({
           <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[85vh] overflow-y-auto p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-base font-semibold text-slate-900">Bulk Edit {assetIds.length} Device(s)</h2>
-              <button type="button" onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-700 text-sm">
+              <button type="button" onClick={() => setOpen(false)} className="text-slate-500 hover:text-slate-700 text-sm">
                 Close
               </button>
             </div>
@@ -161,7 +161,7 @@ export default function BulkEditPanel({
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <FieldToggle label="Status" checked={useStatus} onChange={setUseStatus}>
-                <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
+                <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm">
                   {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
                 {REASON_REQUIRED.has(status) && (
@@ -169,7 +169,7 @@ export default function BulkEditPanel({
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
                     placeholder="Reason (required for this status)"
-                    className="w-full mt-2 rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    className="w-full mt-2 rounded-md border border-slate-400 px-3 py-2 text-sm"
                     rows={2}
                   />
                 )}
@@ -181,7 +181,7 @@ export default function BulkEditPanel({
                   value={makeModel}
                   onChange={(e) => setMakeModel(e.target.value)}
                   placeholder="e.g. Dell Latitude 5420"
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm"
                 />
               </FieldToggle>
 
@@ -190,7 +190,7 @@ export default function BulkEditPanel({
                   <select
                     value={center}
                     onChange={(e) => { setCenter(e.target.value); setDepartment(""); }}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm"
                   >
                     <option value="">Center...</option>
                     {centers.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -199,7 +199,7 @@ export default function BulkEditPanel({
                     value={department}
                     onChange={(e) => setDepartment(e.target.value)}
                     disabled={!center}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50"
+                    className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm disabled:bg-slate-50"
                   >
                     <option value="">Department...</option>
                     {departmentsForCenter.map((d) => <option key={d} value={d}>{d}</option>)}
@@ -208,7 +208,7 @@ export default function BulkEditPanel({
               </FieldToggle>
 
               <FieldToggle label="Vendor" checked={useVendor} onChange={setUseVendor}>
-                <select value={vendorId} onChange={(e) => setVendorId(e.target.value)} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
+                <select value={vendorId} onChange={(e) => setVendorId(e.target.value)} className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm">
                   <option value="">Unset</option>
                   {vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
                 </select>
@@ -221,7 +221,7 @@ export default function BulkEditPanel({
                   step="0.01"
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm"
                 />
               </FieldToggle>
 
@@ -232,7 +232,7 @@ export default function BulkEditPanel({
                   max={2100}
                   value={purchaseYear}
                   onChange={(e) => setPurchaseYear(e.target.value)}
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm"
                 />
               </FieldToggle>
 
@@ -241,7 +241,7 @@ export default function BulkEditPanel({
                   <select
                     value={batchMode}
                     onChange={(e) => setBatchMode(e.target.value as "add" | "remove")}
-                    className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    className="rounded-md border border-slate-400 px-3 py-2 text-sm"
                   >
                     <option value="add">Add to</option>
                     <option value="remove">Remove from</option>
@@ -252,17 +252,17 @@ export default function BulkEditPanel({
                     value={batchName}
                     onChange={(e) => setBatchName(e.target.value)}
                     placeholder="e.g. 2026-10 RAM upgrade"
-                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                    className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm"
                   />
                   <datalist id="batch-names">
                     {batches.map((b) => <option key={b} value={b} />)}
                   </datalist>
                 </div>
-                <p className="mt-1 text-xs text-slate-400">Pick an existing batch or type a new name to create it.</p>
+                <p className="mt-1 text-xs text-slate-500">Pick an existing batch or type a new name to create it.</p>
               </FieldToggle>
 
               {error && <p className="text-sm text-red-600">{error}</p>}
-              {success && <p className="text-sm text-green-600">{success}</p>}
+              {success && <p className="text-sm text-green-700">{success}</p>}
 
               <div className="flex gap-2 pt-2 border-t border-slate-100">
                 <button
@@ -272,7 +272,7 @@ export default function BulkEditPanel({
                 >
                   {submitting ? "Applying..." : `Apply to ${assetIds.length} device(s)`}
                 </button>
-                <button type="button" onClick={() => setOpen(false)} className="rounded-md border border-slate-300 text-sm font-medium px-4 py-2 hover:bg-slate-50">
+                <button type="button" onClick={() => setOpen(false)} className="rounded-md border border-slate-400 bg-white text-sm font-medium text-slate-900 px-4 py-2 hover:bg-slate-50">
                   Cancel
                 </button>
               </div>
@@ -303,7 +303,7 @@ function FieldToggle({
           type="checkbox"
           checked={checked}
           onChange={(e) => onChange(e.target.checked)}
-          className="h-4 w-4 rounded border-slate-300"
+          className="h-4 w-4 rounded border-slate-400"
         />
         <span className="text-sm font-medium text-slate-700">{label}</span>
       </label>

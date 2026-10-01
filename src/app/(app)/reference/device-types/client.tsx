@@ -94,7 +94,7 @@ export default function DeviceTypesClient({ initial }: { initial: DeviceType[] }
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder="e.g. Printer"
-              className="w-full rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+              className="w-full rounded-md border border-slate-400 px-3 py-1.5 text-sm"
               required
             />
           </div>
@@ -103,7 +103,7 @@ export default function DeviceTypesClient({ initial }: { initial: DeviceType[] }
               type="checkbox"
               checked={newHasSpecs}
               onChange={(e) => setNewHasSpecs(e.target.checked)}
-              className="h-4 w-4 rounded border-slate-300"
+              className="h-4 w-4 rounded border-slate-400"
             />
             <span className="text-xs text-slate-600">Has CPU/RAM/Storage</span>
           </label>
@@ -115,7 +115,7 @@ export default function DeviceTypesClient({ initial }: { initial: DeviceType[] }
               value={newDepreciationMonths}
               onChange={(e) => setNewDepreciationMonths(e.target.value)}
               placeholder="e.g. 36"
-              className="w-24 rounded-md border border-slate-300 px-3 py-1.5 text-sm"
+              className="w-24 rounded-md border border-slate-400 px-3 py-1.5 text-sm"
             />
           </div>
           <button type="submit" className="rounded-md bg-blue-600 text-white text-sm font-medium px-4 py-1.5 hover:bg-blue-700">
@@ -144,7 +144,7 @@ export default function DeviceTypesClient({ initial }: { initial: DeviceType[] }
                     onChange={(e) => setEditingName(e.target.value)}
                     onBlur={() => saveName(item)}
                     onKeyDown={(e) => e.key === "Enter" && saveName(item)}
-                    className="rounded-md border border-slate-300 px-2 py-1 text-sm"
+                    className="rounded-md border border-slate-400 px-2 py-1 text-sm"
                   />
                 ) : (
                   <button
@@ -164,7 +164,7 @@ export default function DeviceTypesClient({ initial }: { initial: DeviceType[] }
                     type="checkbox"
                     checked={item.hasSpecs}
                     onChange={() => toggleHasSpecs(item)}
-                    className="h-4 w-4 rounded border-slate-300"
+                    className="h-4 w-4 rounded border-slate-400"
                   />
                   <span className="text-xs text-slate-500">{item.hasSpecs ? "Yes" : "No"}</span>
                 </label>
@@ -176,11 +176,11 @@ export default function DeviceTypesClient({ initial }: { initial: DeviceType[] }
                   defaultValue={item.depreciationMonths ?? ""}
                   onBlur={(e) => saveDepreciationMonths(item, e.target.value)}
                   placeholder="Not set"
-                  className="w-24 rounded-md border border-slate-300 px-2 py-1 text-sm"
+                  className="w-24 rounded-md border border-slate-400 px-2 py-1 text-sm"
                 />
               </td>
               <td className="py-2 text-right">
-                <button onClick={() => handleDelete(item)} className="text-xs text-red-500 hover:text-red-700">
+                <button onClick={() => handleDelete(item)} className="text-xs text-red-600 hover:text-red-700">
                   Delete
                 </button>
               </td>
@@ -189,7 +189,7 @@ export default function DeviceTypesClient({ initial }: { initial: DeviceType[] }
         </tbody>
       </table>
 
-      <p className="text-xs text-slate-400">
+      <p className="text-xs text-slate-500">
         Click a name to rename it. Toggle the checkbox to instantly control whether Register/Update Device shows
         CPU/RAM/Storage fields for that type.
       </p>

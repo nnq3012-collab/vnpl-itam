@@ -34,7 +34,7 @@ export default function AdminMenu({ showConfiguration }: { showConfiguration: bo
         className={`text-sm inline-flex items-center gap-1 ${isActive ? "text-slate-900 font-medium" : "text-slate-600 hover:text-slate-900"}`}
       >
         IT Admin (IT)
-        <span className="text-xs text-slate-400">▾</span>
+        <span className="text-xs text-slate-500">▾</span>
       </button>
       {open && (
         <div className="absolute right-0 top-full mt-1 min-w-[180px] rounded-md border border-slate-200 bg-white shadow-lg py-1 z-20">

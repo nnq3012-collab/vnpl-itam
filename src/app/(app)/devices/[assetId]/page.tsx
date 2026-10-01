@@ -73,7 +73,7 @@ export default async function DeviceDetailPage({
       <div className="bg-white rounded-lg shadow overflow-x-auto">
         <div className="px-4 py-2 border-b border-slate-100">
           <h2 className="text-sm font-semibold text-slate-900">History</h2>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-500">
             Allocation, return, lifecycle, hardware, and maintenance events for this device.
           </p>
         </div>
@@ -104,7 +104,7 @@ export default async function DeviceDetailPage({
                         const { category, text } = parseMaintenanceDescription(log.newState);
                         return category ? (
                           <>
-                            <span className="text-slate-400">{category}:</span> {text}
+                            <span className="text-slate-500">{category}:</span> {text}
                           </>
                         ) : (
                           text
@@ -121,7 +121,7 @@ export default async function DeviceDetailPage({
             })}
             {logs.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-slate-400">
+                <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
                   No history recorded for this device yet.
                 </td>
               </tr>

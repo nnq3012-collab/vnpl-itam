@@ -166,7 +166,7 @@ export default async function DevicesPage({
       key: d.assetId,
       rowClassName: highlight === d.assetId ? "bg-amber-50" : "",
       cells: {
-        select: <input type="checkbox" name="assetId" value={d.assetId} className="h-4 w-4 rounded border-slate-300" />,
+        select: <input type="checkbox" name="assetId" value={d.assetId} className="h-4 w-4 rounded border-slate-400" />,
         assetId: (
           <span className="font-medium text-slate-900">
             <Link href={`/devices/${encodeURIComponent(d.assetId)}`} className="text-blue-600 hover:underline">
@@ -175,7 +175,7 @@ export default async function DevicesPage({
             {canEdit && (
               <Link
                 href={`/devices/update?assetId=${encodeURIComponent(d.assetId)}`}
-                className="ml-2 text-xs text-slate-400 hover:text-slate-700"
+                className="ml-2 text-xs text-slate-500 hover:text-slate-700"
               >
                 Edit
               </Link>
@@ -210,7 +210,7 @@ export default async function DevicesPage({
             <span className="text-slate-600">{depreciation.remainingValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
           )
         ) : (
-          <span className="text-slate-400">—</span>
+          <span className="text-slate-500">—</span>
         ),
         dateRegistered: <span className="text-slate-500">{d.dateRegistered.toLocaleDateString()}</span>,
         lastUpdated: <span className="text-slate-500">{d.lastUpdated.toLocaleDateString()}</span>,
@@ -227,13 +227,13 @@ export default async function DevicesPage({
           <div className="flex gap-2">
             <a
               href={`/api/export/devices?${exportQuery}${exportQuery ? "&" : ""}format=xlsx`}
-              className="rounded-md border border-slate-300 bg-white text-xs font-medium text-slate-900 px-3 py-1.5 hover:bg-slate-50"
+              className="rounded-md border border-slate-400 bg-white text-xs font-medium text-slate-900 px-3 py-1.5 hover:bg-slate-50"
             >
               Export .xlsx
             </a>
             <a
               href={`/api/export/devices?${exportQuery}${exportQuery ? "&" : ""}format=csv`}
-              className="rounded-md border border-slate-300 bg-white text-xs font-medium text-slate-900 px-3 py-1.5 hover:bg-slate-50"
+              className="rounded-md border border-slate-400 bg-white text-xs font-medium text-slate-900 px-3 py-1.5 hover:bg-slate-50"
             >
               Export .csv
             </a>
@@ -247,7 +247,7 @@ export default async function DevicesPage({
             type="text"
             name="assetId"
             defaultValue={first(params.assetId) ?? ""}
-            className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+            className="rounded-md border border-slate-400 px-2 py-1.5 text-sm"
             placeholder="Search..."
           />
         </div>
@@ -278,7 +278,7 @@ export default async function DevicesPage({
         />
         <div>
           <label className="block text-xs font-medium text-slate-500 mb-1">Assigned User</label>
-          <select name="assignedUserId" defaultValue={first(params.assignedUserId) ?? ""} className="rounded-md border border-slate-300 px-2 py-1.5 text-sm">
+          <select name="assignedUserId" defaultValue={first(params.assignedUserId) ?? ""} className="rounded-md border border-slate-400 px-2 py-1.5 text-sm">
             <option value="">All</option>
             <option value="UNASSIGNED">Unassigned</option>
             {employees.map((e) => (
@@ -290,13 +290,13 @@ export default async function DevicesPage({
           <button type="submit" className="rounded-md bg-blue-600 text-white text-sm font-medium px-4 py-1.5 hover:bg-blue-700">
             Filter
           </button>
-          <a href="/devices" className="rounded-md border border-slate-300 text-sm font-medium px-4 py-1.5 hover:bg-slate-50">
+          <a href="/devices" className="rounded-md border border-slate-400 bg-white text-sm font-medium text-slate-900 px-4 py-1.5 hover:bg-slate-50">
             Reset
           </a>
           <button
             type="submit"
             form="print-labels-form"
-            className="rounded-md bg-slate-800 text-white text-sm font-medium px-4 py-1.5 hover:bg-slate-900"
+            className="rounded-md border border-slate-400 bg-white text-sm font-medium text-slate-900 px-4 py-1.5 hover:bg-slate-50"
           >
             Print Labels
           </button>
@@ -316,7 +316,7 @@ export default async function DevicesPage({
           hint='Check devices below, then click "Print Labels" above.'
         />
       </form>
-      <p className="text-xs text-slate-400">{devices.length} device(s) shown.</p>
+      <p className="text-xs text-slate-500">{devices.length} device(s) shown.</p>
     </div>
   );
 }

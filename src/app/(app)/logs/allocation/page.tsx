@@ -67,14 +67,14 @@ export default async function AllocationLogPage({
             type="text"
             name="assetId"
             defaultValue={assetId ?? ""}
-            className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+            className="rounded-md border border-slate-400 px-2 py-1.5 text-sm"
             placeholder="Search..."
           />
         </div>
         <button type="submit" className="rounded-md bg-blue-600 text-white text-sm font-medium px-4 py-1.5 hover:bg-blue-700">
           Filter
         </button>
-        <a href="/logs/allocation" className="rounded-md border border-slate-300 text-sm font-medium px-4 py-1.5 hover:bg-slate-50">
+        <a href="/logs/allocation" className="rounded-md border border-slate-400 bg-white text-sm font-medium text-slate-900 px-4 py-1.5 hover:bg-slate-50">
           Reset
         </a>
       </form>
@@ -87,7 +87,7 @@ export default async function AllocationLogPage({
           emptyMessage="No allocation or return events found."
         />
       </div>
-      <p className="text-xs text-slate-400">{logs.length} event(s) shown (most recent 500).</p>
+      <p className="text-xs text-slate-500">{logs.length} event(s) shown (most recent 500).</p>
     </div>
   );
 }

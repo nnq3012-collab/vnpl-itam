@@ -28,7 +28,7 @@ export default function NavDropdown({ label, items }: { label: string; items: Na
         className={`text-sm inline-flex items-center gap-1 ${isActive ? "text-slate-900 font-medium" : "text-slate-600 hover:text-slate-900"}`}
       >
         {label}
-        <span className="text-xs text-slate-400">▾</span>
+        <span className="text-xs text-slate-500">▾</span>
       </button>
       {open && (
         <div className="absolute left-0 top-full mt-1 min-w-[200px] rounded-md border border-slate-200 bg-white shadow-lg py-1 z-20">

@@ -131,7 +131,7 @@ export default function RegisterDeviceForm({
           type="text"
           value={assetId}
           onChange={(e) => setAssetId(e.target.value)}
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm"
           required
         />
         {suggestedId && (
@@ -153,7 +153,7 @@ export default function RegisterDeviceForm({
         <select
           value={deviceTypeId}
           onChange={(e) => setDeviceTypeId(e.target.value)}
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm"
           required
         >
           <option value="">Select...</option>
@@ -169,7 +169,7 @@ export default function RegisterDeviceForm({
           type="text"
           value={makeModel}
           onChange={(e) => setMakeModel(e.target.value)}
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm"
         />
       </div>
 
@@ -181,7 +181,7 @@ export default function RegisterDeviceForm({
               type="text"
               value={cpu}
               onChange={(e) => setCpu(e.target.value)}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm"
             />
           </div>
           <div>
@@ -191,7 +191,7 @@ export default function RegisterDeviceForm({
               value={ram}
               onChange={(e) => setRam(e.target.value)}
               placeholder="e.g. 16GB"
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm"
             />
           </div>
           <div>
@@ -201,7 +201,7 @@ export default function RegisterDeviceForm({
               value={storage}
               onChange={(e) => setStorage(e.target.value)}
               placeholder="e.g. 256GB SSD"
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm"
             />
           </div>
         </div>
@@ -213,7 +213,7 @@ export default function RegisterDeviceForm({
           type="text"
           value={serialNumber}
           onChange={(e) => setSerialNumber(e.target.value)}
-          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm"
         />
       </div>
 
@@ -226,7 +226,7 @@ export default function RegisterDeviceForm({
               setCenter(e.target.value);
               setDepartment("");
             }}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm"
             required
           >
             <option value="">Select...</option>
@@ -240,7 +240,7 @@ export default function RegisterDeviceForm({
           <select
             value={department}
             onChange={(e) => setDepartment(e.target.value)}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm"
             required
             disabled={!center}
           >
@@ -279,7 +279,7 @@ export default function RegisterDeviceForm({
           <select
             value={vendorId}
             onChange={(e) => setVendorId(e.target.value)}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm"
           >
             <option value="">Select...</option>
             {vendors.map((v) => (
@@ -295,7 +295,7 @@ export default function RegisterDeviceForm({
             step="0.01"
             value={price}
             onChange={(e) => setPrice(e.target.value)}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm"
           />
         </div>
         <div>
@@ -306,13 +306,13 @@ export default function RegisterDeviceForm({
             max={2100}
             value={purchaseYear}
             onChange={(e) => setPurchaseYear(e.target.value)}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm"
           />
         </div>
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
-      {success && <p className="text-sm text-green-600">{success}</p>}
+      {success && <p className="text-sm text-green-700">{success}</p>}
 
       <button
         type="submit"

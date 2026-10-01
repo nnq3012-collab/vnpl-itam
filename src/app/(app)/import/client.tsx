@@ -161,7 +161,7 @@ function DeviceImport() {
       </div>
       <div>
         <input type="file" accept=".xlsx,.xls,.csv" onChange={handleFile} className="text-sm" />
-        {sheetUsed && <p className="text-xs text-slate-400 mt-1">Reading sheet: &quot;{sheetUsed}&quot;</p>}
+        {sheetUsed && <p className="text-xs text-slate-500 mt-1">Reading sheet: &quot;{sheetUsed}&quot;</p>}
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
@@ -308,10 +308,10 @@ function EmployeeImport() {
       </div>
       <div>
         <input type="file" accept=".xlsx,.xls,.csv" onChange={handleFile} className="text-sm" />
-        {sheetUsed && <p className="text-xs text-slate-400 mt-1">Reading sheet: &quot;{sheetUsed}&quot;</p>}
+        {sheetUsed && <p className="text-xs text-slate-500 mt-1">Reading sheet: &quot;{sheetUsed}&quot;</p>}
       </div>
 
-      <p className="text-xs text-slate-400">
+      <p className="text-xs text-slate-500">
         Safe to re-run: existing employees (matched by Employee ID) get their Name/Email/Department refreshed from
         the file. Their Active/Resigned/Transferred Status is never changed by import — only Update Device or the
         Employees reference list can change that.

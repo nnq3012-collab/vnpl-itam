@@ -20,7 +20,7 @@ export default function SearchBox() {
         value={assetId}
         onChange={(e) => setAssetId(e.target.value)}
         placeholder="e.g. LAP001"
-        className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="flex-1 rounded-md border border-slate-400 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
       <button
         type="submit"
