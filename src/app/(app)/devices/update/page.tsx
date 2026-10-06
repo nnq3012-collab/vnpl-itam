@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { Role } from "@prisma/client";
+import { canUseFeature } from "@/lib/feature-access";
 import UpdateDeviceClient from "./update-client";
 
 export default async function UpdateDevicePage({
@@ -22,15 +23,17 @@ export default async function UpdateDevicePage({
     );
   }
 
-  const [devices, deviceTypes, locations, employees, vendors] = await Promise.all([
+  const [devices, deviceTypes, locations, employees, vendors, batches, canManageBatches] = await Promise.all([
     prisma.device.findMany({
-      include: { deviceType: true, location: true, assignedUser: true, vendor: true },
+      include: { deviceType: true, location: true, assignedUser: true, vendor: true, batches: { select: { name: true } } },
       orderBy: { assetId: "asc" },
     }),
     prisma.deviceType.findMany({ orderBy: { name: "asc" } }),
     prisma.location.findMany({ orderBy: [{ center: "asc" }, { department: "asc" }] }),
     prisma.employee.findMany({ orderBy: { fullName: "asc" } }),
     prisma.vendor.findMany({ orderBy: { name: "asc" } }),
+    prisma.batch.findMany({ orderBy: { createdAt: "desc" }, select: { name: true } }),
+    canUseFeature(session.role, "devices.bulkEdit"),
   ]);
 
   return (
@@ -59,7 +62,9 @@ export default async function UpdateDevicePage({
           vendorId: d.vendorId,
           price: d.price ? Number(d.price) : null,
           purchaseYear: d.purchaseYear,
+          batches: d.batches.map((b) => b.name),
         }))}
+        allBatches={canManageBatches ? batches.map((b) => b.name) : null}
         deviceTypes={deviceTypes.map((t) => ({ id: t.id, name: t.name, hasSpecs: t.hasSpecs }))}
         locations={locations.map((l) => ({ id: l.id, center: l.center, department: l.department }))}
         employees={employees.map((e) => ({ id: e.id, fullName: e.fullName, email: e.email, employeeId: e.employeeId, status: e.status }))}

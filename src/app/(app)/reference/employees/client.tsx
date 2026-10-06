@@ -16,6 +16,10 @@ type Employee = {
 type Location = { id: string; center: string; department: string };
 
 const STATUS_OPTIONS = ["ACTIVE", "RESIGNED", "TRANSFERRED"];
+const DETAILS_OPTIONS = [
+  { value: "missing", label: "Missing Center/Department" },
+  { value: "complete", label: "Complete" },
+];
 const DEVICE_OPTIONS = [
   { value: "has", label: "Has devices" },
   { value: "none", label: "No devices" },
@@ -34,12 +38,18 @@ function needsReview(item: Employee) {
 export default function EmployeesClient({ initial, locations }: { initial: Employee[]; locations: Location[] }) {
   const [items, setItems] = useState(initial);
   const [newForm, setNewForm] = useState(emptyForm);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState(emptyForm);
+  // Rows currently in edit mode, keyed by employee id — several at once for
+  // "Edit selected rows".
+  const [edits, setEdits] = useState<Record<string, typeof emptyForm>>({});
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [onlyNeedsReview, setOnlyNeedsReview] = useState(false);
-  const [filters, setFilters] = useState({ status: [] as string[], center: [] as string[], department: [] as string[], devices: [] as string[] });
+  const [filters, setFilters] = useState({
+    status: [] as string[],
+    center: [] as string[],
+    department: [] as string[],
+    devices: [] as string[],
+    details: [] as string[],
+  });
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulk, setBulk] = useState({ useStatus: false, status: "RESIGNED", useLocation: false, center: "", department: "" });
 
@@ -82,29 +92,62 @@ export default function EmployeesClient({ initial, locations }: { initial: Emplo
     setNewForm(emptyForm);
   }
 
-  function startEdit(item: Employee) {
-    setEditingId(item.id);
-    setEditForm({
-      employeeId: item.employeeId,
-      fullName: item.fullName,
-      email: item.email ?? "",
-      center: item.center ?? "",
-      department: item.department ?? "",
-      status: item.status,
+  function startEdit(list: Employee[]) {
+    setEdits((prev) => {
+      const next = { ...prev };
+      for (const item of list) {
+        next[item.id] ??= {
+          employeeId: item.employeeId,
+          fullName: item.fullName,
+          email: item.email ?? "",
+          center: item.center ?? "",
+          department: item.department ?? "",
+          status: item.status,
+        };
+      }
+      return next;
     });
   }
 
-  async function saveEdit(item: Employee) {
-    setError(null);
+  function setEditField(id: string, patch: Partial<typeof emptyForm>) {
+    setEdits((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
+  }
+
+  function cancelEdit(id: string) {
+    setEdits((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  }
+
+  /** Saves one row; returns an error message, or null on success. */
+  async function saveRow(item: Employee): Promise<string | null> {
     const res = await fetch(`/api/reference/employees/${item.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(editForm),
+      body: JSON.stringify(edits[item.id]),
     });
     const data = await res.json();
-    if (!res.ok) return setError(data.error);
+    if (!res.ok) return `${item.fullName}: ${data.error}`;
     setItems((prev) => sortItems(prev.map((i) => (i.id === item.id ? toEmployee(data.employee, i.deviceCount) : i))));
-    setEditingId(null);
+    cancelEdit(item.id);
+    return null;
+  }
+
+  async function saveEdit(item: Employee) {
+    setError(await saveRow(item));
+  }
+
+  // Saves every row in edit mode; rows that fail stay open with the reason shown.
+  async function saveAllEdits() {
+    const rows = items.filter((i) => edits[i.id]);
+    const errors: string[] = [];
+    for (const item of rows) {
+      const err = await saveRow(item);
+      if (err) errors.push(err);
+    }
+    setError(errors.length ? `Saved ${rows.length - errors.length} of ${rows.length}. ${errors.join(" · ")}` : null);
   }
 
   async function handleDelete(item: Employee) {
@@ -158,18 +201,19 @@ export default function EmployeesClient({ initial, locations }: { initial: Emplo
         (i.email ?? "").toLowerCase().includes(q)
       );
     })
-    .filter((i) => !onlyNeedsReview || needsReview(i))
+    .filter((i) => filters.details.length === 0 || filters.details.includes(needsReview(i) ? "missing" : "complete"))
     .filter((i) => filters.status.length === 0 || filters.status.includes(i.status))
     .filter((i) => filters.center.length === 0 || filters.center.includes(i.center ?? ""))
     .filter((i) => filters.department.length === 0 || filters.department.includes(i.department ?? ""))
     .filter((i) => filters.devices.length === 0 || filters.devices.includes(i.deviceCount > 0 ? "has" : "none"));
 
   const reviewCount = items.filter(needsReview).length;
+  const editCount = Object.keys(edits).length;
   const allFilteredSelected = filtered.length > 0 && filtered.every((i) => selected.has(i.id));
 
   return (
-    <div className="bg-white rounded-lg shadow p-6 space-y-4">
-      {error && <p className="text-sm text-red-600">{error}</p>}
+    <div className="space-y-4">
+      {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">{error}</p>}
 
       {reviewCount > 0 && (
         <div className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2 flex items-center justify-between">
@@ -177,15 +221,17 @@ export default function EmployeesClient({ initial, locations }: { initial: Emplo
             <span className="font-medium">{reviewCount} employee(s)</span> marked <span className="font-semibold">*</span> are
             missing or have unclear Center/Department — please assign these manually below.
           </p>
-          <label className="flex items-center gap-1.5 text-xs text-amber-800 cursor-pointer whitespace-nowrap ml-4">
-            <input type="checkbox" checked={onlyNeedsReview} onChange={(e) => setOnlyNeedsReview(e.target.checked)} className="h-3.5 w-3.5" />
-            Show only these
-          </label>
+          <span className="text-xs text-amber-800 whitespace-nowrap ml-4">Use the Details filter below to list them.</span>
         </div>
       )}
 
-      <form onSubmit={handleAdd} className="space-y-2 pb-4 border-b border-slate-100">
-        <p className="text-xs font-medium text-slate-500">Add Employee</p>
+      {/* Collapsed, blue-tinted panel so it can't be mistaken for the search/filter bar below. */}
+      <details className="group rounded-lg border border-blue-200 bg-blue-50 shadow">
+        <summary className="list-none cursor-pointer select-none px-4 py-3 text-sm font-medium text-blue-800 flex items-center gap-2">
+          <span className="text-lg leading-none transition-transform group-open:rotate-45">+</span>
+          Add New Employee
+        </summary>
+      <form onSubmit={handleAdd} className="px-4 pb-4">
         <div className="grid grid-cols-6 gap-3 items-end">
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">Employee ID</label>
@@ -228,7 +274,10 @@ export default function EmployeesClient({ initial, locations }: { initial: Emplo
           </div>
         </div>
       </form>
+      </details>
 
+      <div className="bg-white rounded-lg shadow p-6 space-y-4">
+      <h2 className="text-sm font-semibold text-slate-900">Search &amp; Filter Employees</h2>
       <div className="flex flex-wrap items-end gap-3">
         <div>
           <span className="block text-xs font-medium text-slate-600 mb-1">Search</span>
@@ -248,6 +297,8 @@ export default function EmployeesClient({ initial, locations }: { initial: Emplo
           selected={filters.department} onChange={(v) => setFilters({ ...filters, department: v })} />
         <MultiFilter label="Devices" name="devices" options={DEVICE_OPTIONS}
           selected={filters.devices} onChange={(v) => setFilters({ ...filters, devices: v })} />
+        <MultiFilter label="Details" name="details" options={DETAILS_OPTIONS}
+          selected={filters.details} onChange={(v) => setFilters({ ...filters, details: v })} />
         <span className="text-xs text-slate-600 pb-2">{filtered.length} of {items.length} shown</span>
       </div>
 
@@ -281,6 +332,23 @@ export default function EmployeesClient({ initial, locations }: { initial: Emplo
           </button>
           <button type="button" onClick={() => setSelected(new Set())} className="rounded-md border border-slate-400 bg-white text-sm font-medium text-slate-900 px-3 py-1 hover:bg-slate-50">
             Clear selection
+          </button>
+          <span className="text-slate-500">|</span>
+          <button type="button" onClick={() => startEdit(items.filter((i) => selected.has(i.id)))}
+            className="rounded-md border border-slate-400 bg-white text-sm font-medium text-slate-900 px-3 py-1 hover:bg-slate-50">
+            Edit selected rows
+          </button>
+        </div>
+      )}
+
+      {editCount > 0 && (
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 flex items-center gap-3 text-sm">
+          <span className="text-amber-800">{editCount} row(s) being edited — change names, IDs, emails, etc. directly in the table.</span>
+          <button type="button" onClick={saveAllEdits} className="rounded-md bg-blue-600 text-white text-sm font-medium px-3 py-1 hover:bg-blue-700">
+            Save all ({editCount})
+          </button>
+          <button type="button" onClick={() => setEdits({})} className="rounded-md border border-slate-400 bg-white text-sm font-medium text-slate-900 px-3 py-1 hover:bg-slate-50">
+            Cancel all
           </button>
         </div>
       )}
@@ -319,46 +387,46 @@ export default function EmployeesClient({ initial, locations }: { initial: Emplo
                     className="h-4 w-4"
                   />
                 </td>
-                {editingId === item.id ? (
+                {edits[item.id] ? (
                   <>
                     <td className="py-2 pr-2">
-                      <input value={editForm.employeeId} onChange={(e) => setEditForm({ ...editForm, employeeId: e.target.value })}
+                      <input value={edits[item.id].employeeId} onChange={(e) => setEditField(item.id, { employeeId: e.target.value })}
                         className="w-full rounded-md border border-slate-400 px-2 py-1 text-sm" />
                     </td>
                     <td className="py-2 pr-2">
-                      <input value={editForm.fullName} onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
+                      <input value={edits[item.id].fullName} onChange={(e) => setEditField(item.id, { fullName: e.target.value })}
                         className="w-full rounded-md border border-slate-400 px-2 py-1 text-sm" />
                     </td>
                     <td className="py-2 pr-2">
-                      <input value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                      <input value={edits[item.id].email} onChange={(e) => setEditField(item.id, { email: e.target.value })}
                         className="w-full rounded-md border border-slate-400 px-2 py-1 text-sm" />
                     </td>
                     <td className="py-2 pr-2">
-                      <select value={editForm.center}
-                        onChange={(e) => setEditForm({ ...editForm, center: e.target.value, department: "" })}
+                      <select value={edits[item.id].center}
+                        onChange={(e) => setEditField(item.id, { center: e.target.value, department: "" })}
                         className="w-full rounded-md border border-slate-400 px-2 py-1 text-sm">
                         <option value="">—</option>
                         {centers.map((c) => <option key={c} value={c}>{c}</option>)}
                       </select>
                     </td>
                     <td className="py-2 pr-2">
-                      <select value={editForm.department}
-                        onChange={(e) => setEditForm({ ...editForm, department: e.target.value })}
-                        disabled={!editForm.center}
+                      <select value={edits[item.id].department}
+                        onChange={(e) => setEditField(item.id, { department: e.target.value })}
+                        disabled={!edits[item.id].center}
                         className="w-full rounded-md border border-slate-400 px-2 py-1 text-sm disabled:bg-slate-50">
                         <option value="">—</option>
-                        {departmentsFor(editForm.center).map((d) => <option key={d} value={d}>{d}</option>)}
+                        {departmentsFor(edits[item.id].center).map((d) => <option key={d} value={d}>{d}</option>)}
                       </select>
                     </td>
                     <td className="py-2 pr-2">
-                      <select value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                      <select value={edits[item.id].status} onChange={(e) => setEditField(item.id, { status: e.target.value })}
                         className="w-full rounded-md border border-slate-400 px-2 py-1 text-sm">
                         {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
                       </select>
                     </td>
                     <td className="py-2 text-right whitespace-nowrap">
                       <button onClick={() => saveEdit(item)} className="text-xs text-blue-600 hover:underline mr-3">Save</button>
-                      <button onClick={() => setEditingId(null)} className="text-xs text-slate-500 hover:underline">Cancel</button>
+                      <button onClick={() => cancelEdit(item.id)} className="text-xs text-slate-500 hover:underline">Cancel</button>
                     </td>
                   </>
                 ) : (
@@ -373,7 +441,7 @@ export default function EmployeesClient({ initial, locations }: { initial: Emplo
                     <td className={`py-2 pr-2 ${needsReview(item) ? "text-amber-700 font-medium" : "text-slate-600"}`}>{item.department ?? "—"}</td>
                     <td className="py-2 pr-2 text-slate-600">{item.status}</td>
                     <td className="py-2 text-right whitespace-nowrap">
-                      <button onClick={() => startEdit(item)} className="text-xs text-slate-500 hover:text-slate-800 mr-3">Edit</button>
+                      <button onClick={() => startEdit([item])} className="text-xs text-slate-500 hover:text-slate-800 mr-3">Edit</button>
                       <button onClick={() => handleDelete(item)} className="text-xs text-red-600 hover:text-red-700">Delete</button>
                     </td>
                   </>
@@ -382,6 +450,7 @@ export default function EmployeesClient({ initial, locations }: { initial: Emplo
             ))}
           </tbody>
         </table>
+      </div>
       </div>
     </div>
   );

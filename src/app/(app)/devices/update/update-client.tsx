@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Combobox from "../combobox";
 import MaintenanceForm from "../[assetId]/maintenance-form";
+import BatchPanel from "./batch-panel";
 
 type DeviceRow = {
   id: string;
@@ -25,6 +26,7 @@ type DeviceRow = {
   vendorId: string | null;
   price: number | null;
   purchaseYear: number | null;
+  batches: string[];
 };
 type DeviceType = { id: string; name: string; hasSpecs: boolean };
 type Location = { id: string; center: string; department: string };
@@ -42,6 +44,7 @@ export default function UpdateDeviceClient({
   locations,
   employees,
   vendors,
+  allBatches,
   initialAssetId,
 }: {
   role: "IT" | "HR" | "FINANCE";
@@ -50,6 +53,8 @@ export default function UpdateDeviceClient({
   locations: Location[];
   employees: Employee[];
   vendors: Vendor[];
+  /** Null when this user may not manage batches — hides the Batches panel. */
+  allBatches: string[] | null;
   initialAssetId?: string;
 }) {
   const router = useRouter();
@@ -88,6 +93,7 @@ export default function UpdateDeviceClient({
       locations={locations}
       employees={employees}
       vendors={vendors}
+      allBatches={allBatches}
       onBack={() => setSelectedAssetDeviceId(null)}
       onSaved={() => {
         router.push(`/devices?highlight=${encodeURIComponent(device.assetId)}#row-${encodeURIComponent(device.assetId)}`);
@@ -103,6 +109,7 @@ function EditForm({
   locations,
   employees,
   vendors,
+  allBatches,
   onBack,
   onSaved,
 }: {
@@ -112,6 +119,7 @@ function EditForm({
   locations: Location[];
   employees: Employee[];
   vendors: Vendor[];
+  allBatches: string[] | null;
   onBack: () => void;
   onSaved: () => void;
 }) {
@@ -419,6 +427,8 @@ function EditForm({
         {submitting ? "Saving..." : "Save Changes"}
       </button>
     </form>
+
+    {allBatches && <BatchPanel assetId={device.assetId} initialBatches={device.batches} allBatches={allBatches} />}
 
     {isIT && (
       <details className="bg-white rounded-lg shadow p-4 group">
