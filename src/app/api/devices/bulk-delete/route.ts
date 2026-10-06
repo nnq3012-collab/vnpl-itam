@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { canDeleteDevices } from "@/lib/rbac";
-import { AuditAction } from "@prisma/client";
+import { deleteDeviceWithSnapshot } from "@/lib/device-deletion";
 
 export async function POST(request: NextRequest) {
   const session = await getSession();
@@ -19,27 +18,8 @@ export async function POST(request: NextRequest) {
   const skipped: string[] = [];
 
   for (const assetId of assetIds) {
-    const device = await prisma.device.findUnique({
-      where: { assetId },
-      include: { deviceType: true, location: true, assignedUser: true },
-    });
-    if (!device) {
-      skipped.push(assetId);
-      continue;
-    }
-
-    await prisma.auditLog.create({
-      data: {
-        assetId: device.assetId,
-        action: AuditAction.LIFECYCLE_UPDATE,
-        previousState: `${device.status} @ ${device.location.center} / ${device.location.department} — ${device.assignedUser?.fullName ?? "Unassigned"}`,
-        newState: "Deleted",
-        operator: session.fullName,
-        reason: null,
-      },
-    });
-    await prisma.device.delete({ where: { id: device.id } });
-    deleted++;
+    if (await deleteDeviceWithSnapshot(assetId, session.fullName)) deleted++;
+    else skipped.push(assetId);
   }
 
   return NextResponse.json({ deleted, skipped });

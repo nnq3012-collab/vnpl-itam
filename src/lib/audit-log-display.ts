@@ -1,4 +1,4 @@
-export type AuditEventType = "Allocation" | "Return" | "Reassignment" | "Maintenance" | "Other";
+export type AuditEventType = "Allocation" | "Return" | "Reassignment" | "Maintenance" | "Deleted" | "Restored" | "Other";
 
 export const MAINTENANCE_CATEGORIES = [
   "Repair",
@@ -24,6 +24,8 @@ export function parseMaintenanceDescription(newState: string | null): { category
 
 export function classifyAuditEvent(action: string, newState: string | null): AuditEventType {
   if (action === "MAINTENANCE") return "Maintenance";
+  if (action === "DELETION") return "Deleted";
+  if (action === "RESTORE") return "Restored";
   if (!newState) return "Other";
   if (newState.includes("Allocation:")) return "Allocation";
   if (newState.includes("Return:")) return "Return";
@@ -36,5 +38,7 @@ export const AUDIT_EVENT_BADGE: Record<AuditEventType, string> = {
   Return: "bg-amber-50 text-amber-700",
   Reassignment: "bg-blue-50 text-blue-700",
   Maintenance: "bg-purple-50 text-purple-700",
+  Deleted: "bg-red-50 text-red-700",
+  Restored: "bg-green-50 text-green-700",
   Other: "bg-slate-100 text-slate-700",
 };

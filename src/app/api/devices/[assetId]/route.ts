@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { AuditAction, DeviceStatus, EmployeeStatus, Role } from "@prisma/client";
 import { canDeleteDevices } from "@/lib/rbac";
+import { deleteDeviceWithSnapshot } from "@/lib/device-deletion";
 
 const REASON_REQUIRED_STATUSES: DeviceStatus[] = [
   DeviceStatus.LOST,
@@ -37,24 +38,9 @@ export async function DELETE(
   }
 
   const { assetId } = await params;
-  const device = await prisma.device.findUnique({
-    where: { assetId },
-    include: { deviceType: true, location: true, assignedUser: true },
-  });
-  if (!device) return NextResponse.json({ error: "Device not found" }, { status: 404 });
-
-  await prisma.auditLog.create({
-    data: {
-      assetId: device.assetId,
-      action: AuditAction.LIFECYCLE_UPDATE,
-      previousState: `${device.status} @ ${device.location.center} / ${device.location.department} — ${device.assignedUser?.fullName ?? "Unassigned"}`,
-      newState: "Deleted",
-      operator: session.fullName,
-      reason: null,
-    },
-  });
-
-  await prisma.device.delete({ where: { id: device.id } });
+  if (!(await deleteDeviceWithSnapshot(assetId, session.fullName))) {
+    return NextResponse.json({ error: "Device not found" }, { status: 404 });
+  }
 
   return NextResponse.json({ ok: true });
 }

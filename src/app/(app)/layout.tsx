@@ -25,6 +25,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const devicesGroup = [
     { href: "/devices", label: "Device Master" },
+    { href: "/logs/activity", label: "Activity Log" },
     { href: "/logs/allocation", label: "Allocation & Return Log" },
     { href: "/batches", label: "Batches" },
   ];

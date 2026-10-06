@@ -41,6 +41,8 @@ enum AuditAction {
   BULK_IMPORT
   MAINTENANCE
   BATCH
+  DELETION
+  RESTORE
 }
 
 model User {
@@ -160,6 +162,9 @@ model AuditLog {
   newState       String?
   operator       String
   reason         String?
+  // DELETION entries only: the full device row (plus batch ids) at the
+  // moment of deletion, so it can be restored from the Activity Log.
+  snapshot       Json?
 
   @@index([assetId])
   @@index([timestamp])
