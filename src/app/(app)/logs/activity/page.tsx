@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
-import { canDeleteDevices } from "@/lib/rbac";
+import { canConfigureFeatures, canDeleteDevices } from "@/lib/rbac";
 import { AuditAction, Prisma } from "@prisma/client";
 import { classifyAuditEvent, AUDIT_EVENT_BADGE } from "@/lib/audit-log-display";
 import ReorderableTable, { type TableColumn, type TableRow } from "@/components/reorderable-table";
@@ -34,6 +34,14 @@ export default async function ActivityLogPage({
 }) {
   const session = await getSession();
   if (!session) redirect("/login");
+  // Admin-only: restricted to the same account(s) as the Configuration tab.
+  if (!canConfigureFeatures(session.username)) {
+    return (
+      <div className="bg-white rounded-lg shadow p-6">
+        <p className="text-sm text-red-600">The Activity Log is restricted to the IT Admin account.</p>
+      </div>
+    );
+  }
   const canRestore = canDeleteDevices(session.username);
 
   const params = await searchParams;
