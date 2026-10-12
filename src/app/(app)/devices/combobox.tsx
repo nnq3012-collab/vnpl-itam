@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useRef, useEffect } from "react";
+import { matchesSearch } from "@/lib/search";
 
 export type ComboboxOption = {
   id: string;
@@ -28,14 +29,7 @@ export default function Combobox({
   const selected = options.find((o) => o.id === value) ?? null;
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const base = q
-      ? options.filter(
-          (o) =>
-            o.label.toLowerCase().includes(q) || (o.sublabel ?? "").toLowerCase().includes(q)
-        )
-      : options;
-    return base.slice(0, 50);
+    return options.filter((o) => matchesSearch(query, [o.label, o.sublabel])).slice(0, 50);
   }, [options, query]);
 
   useEffect(() => {

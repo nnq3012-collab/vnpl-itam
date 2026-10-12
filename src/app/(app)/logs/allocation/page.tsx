@@ -3,6 +3,8 @@ import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { classifyAuditEvent, AUDIT_EVENT_BADGE } from "@/lib/audit-log-display";
+import Link from "next/link";
+import { auditLogSearchWhere } from "@/lib/device-filters";
 import ReorderableTable, { type TableColumn, type TableRow } from "@/components/reorderable-table";
 
 const ALLOCATION_MARKERS = ["Allocation:", "Return:", "Reassignment:"];
@@ -10,16 +12,19 @@ const ALLOCATION_MARKERS = ["Allocation:", "Return:", "Reassignment:"];
 export default async function AllocationLogPage({
   searchParams,
 }: {
-  searchParams: Promise<{ assetId?: string }>;
+  searchParams: Promise<{ q?: string; assetId?: string }>;
 }) {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const { assetId } = await searchParams;
+  const { q: rawQ, assetId } = await searchParams;
+  const q = (rawQ ?? assetId ?? "").trim();
 
   const where: Prisma.AuditLogWhereInput = {
-    OR: ALLOCATION_MARKERS.map((marker) => ({ newState: { contains: marker } })),
-    ...(assetId ? { assetId: { contains: assetId } } : {}),
+    AND: [
+      { OR: ALLOCATION_MARKERS.map((marker) => ({ newState: { contains: marker } })) },
+      ...(q ? [await auditLogSearchWhere(q)] : []),
+    ],
   };
 
   const logs = await prisma.auditLog.findMany({
@@ -62,21 +67,21 @@ export default async function AllocationLogPage({
 
       <form className="bg-white rounded-lg shadow p-4 flex flex-wrap gap-3 items-end" method="get">
         <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">Asset ID</label>
+          <label className="block text-xs font-medium text-slate-600 mb-1">Search</label>
           <input
-            type="text"
-            name="assetId"
-            defaultValue={assetId ?? ""}
-            className="rounded-md border border-slate-400 px-2 py-1.5 text-sm"
-            placeholder="Search..."
+            type="search"
+            name="q"
+            defaultValue={q}
+            className="w-72 rounded-md border border-slate-400 px-2 py-1.5 text-sm"
+            placeholder="Asset ID, user name, operator..."
           />
         </div>
         <button type="submit" className="rounded-md bg-blue-600 text-white text-sm font-medium px-4 py-1.5 hover:bg-blue-700">
           Filter
         </button>
-        <a href="/logs/allocation" className="rounded-md border border-slate-400 bg-white text-sm font-medium text-slate-900 px-4 py-1.5 hover:bg-slate-50">
-          Reset
-        </a>
+        <Link href="/logs/allocation" className="rounded-md border border-slate-400 bg-white text-sm font-medium text-slate-900 px-4 py-1.5 hover:bg-slate-50">
+          Clear
+        </Link>
       </form>
 
       <div className="bg-white rounded-lg shadow overflow-x-auto">

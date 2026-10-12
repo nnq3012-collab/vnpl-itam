@@ -8,6 +8,7 @@ import { classifyAuditEvent, AUDIT_EVENT_BADGE } from "@/lib/audit-log-display";
 import ReorderableTable, { type TableColumn, type TableRow } from "@/components/reorderable-table";
 import MultiFilter from "../../devices/multi-filter";
 import RestoreButton from "./restore-button";
+import { auditLogSearchWhere } from "@/lib/device-filters";
 
 const ACTION_LABELS: Record<AuditAction, string> = {
   INITIAL_REGISTRATION: "Registered",
@@ -45,14 +46,14 @@ export default async function ActivityLogPage({
   const canRestore = canDeleteDevices(session.username);
 
   const params = await searchParams;
-  const assetId = first(params.assetId);
+  const q = (first(params.q) || first(params.assetId)).trim();
   const operator = first(params.operator);
   const from = first(params.from);
   const to = first(params.to);
   const actions = all(params.action).filter((a): a is AuditAction => a in AuditAction);
 
   const where: Prisma.AuditLogWhereInput = {
-    ...(assetId ? { assetId: { contains: assetId, mode: "insensitive" } } : {}),
+    ...(q ? await auditLogSearchWhere(q) : {}),
     ...(operator ? { operator } : {}),
     ...(actions.length ? { action: { in: actions } } : {}),
     ...(from || to
@@ -122,13 +123,13 @@ export default async function ActivityLogPage({
 
       <form className="bg-white rounded-lg shadow p-4 flex flex-wrap gap-3 items-end" method="get">
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">Asset ID</label>
+          <label className="block text-xs font-medium text-slate-600 mb-1">Search</label>
           <input
-            type="text"
-            name="assetId"
-            defaultValue={assetId}
-            className="rounded-md border border-slate-400 px-2 py-1.5 text-sm"
-            placeholder="Search..."
+            type="search"
+            name="q"
+            defaultValue={q}
+            className="w-72 rounded-md border border-slate-400 px-2 py-1.5 text-sm"
+            placeholder="Asset ID, user name, details..."
           />
         </div>
         <MultiFilter
@@ -158,7 +159,7 @@ export default async function ActivityLogPage({
           Filter
         </button>
         <Link href="/logs/activity" className="rounded-md border border-slate-400 bg-white text-sm font-medium text-slate-900 px-4 py-1.5 hover:bg-slate-50">
-          Reset
+          Clear
         </Link>
       </form>
 

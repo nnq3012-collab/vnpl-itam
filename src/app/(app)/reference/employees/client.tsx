@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import MultiFilter from "../../devices/multi-filter";
+import { matchesSearch } from "@/lib/search";
 
 type Employee = {
   id: string;
@@ -192,15 +193,7 @@ export default function EmployeesClient({ initial, locations }: { initial: Emplo
   }
 
   const filtered = items
-    .filter((i) => {
-      const q = query.trim().toLowerCase();
-      if (!q) return true;
-      return (
-        i.fullName.toLowerCase().includes(q) ||
-        i.employeeId.toLowerCase().includes(q) ||
-        (i.email ?? "").toLowerCase().includes(q)
-      );
-    })
+    .filter((i) => matchesSearch(query, [i.fullName, i.employeeId, i.email, i.center, i.department]))
     .filter((i) => filters.details.length === 0 || filters.details.includes(needsReview(i) ? "missing" : "complete"))
     .filter((i) => filters.status.length === 0 || filters.status.includes(i.status))
     .filter((i) => filters.center.length === 0 || filters.center.includes(i.center ?? ""))
@@ -209,6 +202,7 @@ export default function EmployeesClient({ initial, locations }: { initial: Emplo
 
   const reviewCount = items.filter(needsReview).length;
   const editCount = Object.keys(edits).length;
+  const anyFilterActive = query.trim() !== "" || Object.values(filters).some((v) => v.length > 0);
   const allFilteredSelected = filtered.length > 0 && filtered.every((i) => selected.has(i.id));
 
   return (
@@ -282,10 +276,11 @@ export default function EmployeesClient({ initial, locations }: { initial: Emplo
         <div>
           <span className="block text-xs font-medium text-slate-600 mb-1">Search</span>
           <input
-            type="text"
+            type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Name, employee ID, or email..."
+            placeholder="Name, ID, email, center..."
+            title="Not case- or accent-sensitive: “nguyen hai” finds “Nguyễn Khắc Hải”. Every word must match."
             className="w-64 rounded-md border border-slate-400 px-3 py-1.5 text-sm"
           />
         </div>
@@ -299,6 +294,18 @@ export default function EmployeesClient({ initial, locations }: { initial: Emplo
           selected={filters.devices} onChange={(v) => setFilters({ ...filters, devices: v })} />
         <MultiFilter label="Details" name="details" options={DETAILS_OPTIONS}
           selected={filters.details} onChange={(v) => setFilters({ ...filters, details: v })} />
+        {anyFilterActive && (
+          <button
+            type="button"
+            onClick={() => {
+              setQuery("");
+              setFilters({ status: [], center: [], department: [], devices: [], details: [] });
+            }}
+            className="rounded-md border border-slate-400 bg-white text-sm font-medium text-slate-900 px-3 py-1.5 hover:bg-slate-50"
+          >
+            Clear filters
+          </button>
+        )}
         <span className="text-xs text-slate-600 pb-2">{filtered.length} of {items.length} shown</span>
       </div>
 

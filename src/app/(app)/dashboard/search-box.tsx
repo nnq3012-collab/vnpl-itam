@@ -5,21 +5,21 @@ import { useRouter } from "next/navigation";
 
 export default function SearchBox() {
   const router = useRouter();
-  const [assetId, setAssetId] = useState("");
+  const [query, setQuery] = useState("");
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!assetId.trim()) return;
-    router.push(`/devices?assetId=${encodeURIComponent(assetId.trim())}`);
+    if (!query.trim()) return;
+    router.push(`/devices?q=${encodeURIComponent(query.trim())}`);
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2 max-w-sm">
+    <form onSubmit={handleSubmit} className="flex gap-2 max-w-md">
       <input
-        type="text"
-        value={assetId}
-        onChange={(e) => setAssetId(e.target.value)}
-        placeholder="e.g. LAP001"
+        type="search"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="e.g. LAP001, nguyen hai, serial..."
         className="flex-1 rounded-md border border-slate-400 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
       <button

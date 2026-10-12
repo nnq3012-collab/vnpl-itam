@@ -76,7 +76,8 @@ export default async function DevicesPage({
   const canDelete = canDeleteDevices(session?.username);
   const canBulkEdit = session ? await canUseFeature(session.role, "devices.bulkEdit") : false;
 
-  const where = buildDeviceWhere((k) => all(params[k]));
+  const where = await buildDeviceWhere((k) => all(params[k]));
+  const searchText = first(params.q) ?? first(params.assetId) ?? "";
   const sort = first(params.sort);
   const dir = first(params.dir);
   const highlight = first(params.highlight);
@@ -134,6 +135,32 @@ export default async function DevicesPage({
   }
 
   const exportQuery = toQuery(params, ["sort", "dir"]).toString();
+
+  // Active-filter chips: each links to the current URL minus that one value.
+  const chips: { key: string; value: string; label: string }[] = [
+    ...(searchText ? [{ key: "q", value: searchText, label: `Search: "${searchText}"` }] : []),
+    ...selectedStatuses.map((v) => ({ key: "status", value: v, label: STATUS_LABELS[v as DeviceStatus] ?? v })),
+    ...all(params.center).map((v) => ({ key: "center", value: v, label: v })),
+    ...all(params.department).map((v) => ({ key: "department", value: v, label: v })),
+    ...all(params.deviceTypeId).map((v) => ({ key: "deviceTypeId", value: v, label: deviceTypes.find((t) => t.id === v)?.name ?? v })),
+    ...all(params.batchId).map((v) => ({ key: "batchId", value: v, label: `Batch: ${batches.find((b) => b.id === v)?.name ?? v}` })),
+    ...all(params.assignedUserId).map((v) => ({
+      key: "assignedUserId",
+      value: v,
+      label: `User: ${v === "UNASSIGNED" ? "Unassigned" : employees.find((e) => e.id === v)?.fullName ?? v}`,
+    })),
+  ];
+  function withoutChip(key: string, value: string) {
+    const qs = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+      if (k === "highlight") continue;
+      for (const x of all(v).flatMap((x) => (k === "status" ? x.split(",") : [x]))) {
+        const isSearch = key === "q" && (k === "q" || k === "assetId");
+        if (x && !isSearch && !(k === key && x === value)) qs.append(k, x);
+      }
+    }
+    return `/devices?${qs.toString()}`;
+  }
 
   const pinnedColumn: TableColumn = { key: "select", header: <SelectAllCheckbox /> };
 
@@ -242,13 +269,14 @@ export default async function DevicesPage({
 
         <form className="bg-white rounded-lg shadow p-4 flex flex-wrap gap-3 items-end" method="get">
         <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">Asset ID</label>
+          <label className="block text-xs font-medium text-slate-600 mb-1">Search</label>
           <input
-            type="text"
-            name="assetId"
-            defaultValue={first(params.assetId) ?? ""}
-            className="rounded-md border border-slate-400 px-2 py-1.5 text-sm"
-            placeholder="Search..."
+            type="search"
+            name="q"
+            defaultValue={searchText}
+            className="w-72 rounded-md border border-slate-400 px-2 py-1.5 text-sm"
+            placeholder="Asset ID, serial, model, user name, email..."
+            title="Not case- or accent-sensitive: “nguyen hai” finds “Nguyễn Khắc Hải”. Every word must match."
           />
         </div>
         <MultiFilter
@@ -290,9 +318,9 @@ export default async function DevicesPage({
           <button type="submit" className="rounded-md bg-blue-600 text-white text-sm font-medium px-4 py-1.5 hover:bg-blue-700">
             Filter
           </button>
-          <a href="/devices" className="rounded-md border border-slate-400 bg-white text-sm font-medium text-slate-900 px-4 py-1.5 hover:bg-slate-50">
-            Reset
-          </a>
+          <Link href="/devices" className="rounded-md border border-slate-400 bg-white text-sm font-medium text-slate-900 px-4 py-1.5 hover:bg-slate-50">
+            Clear all
+          </Link>
           <button
             type="submit"
             form="print-labels-form"
@@ -303,6 +331,22 @@ export default async function DevicesPage({
           {canBulkEdit && <BulkEditPanel vendors={vendors} locations={locations} batches={batches.map((b) => b.name)} />}
           {canDelete && <BulkDeleteButton />}
         </div>
+        {chips.length > 0 && (
+          <div className="basis-full flex flex-wrap items-center gap-2 pt-1">
+            <span className="text-xs text-slate-600">Active filters:</span>
+            {chips.map((c) => (
+              <Link
+                key={`${c.key}-${c.value}`}
+                href={withoutChip(c.key, c.value)}
+                title="Remove this filter"
+                className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-800 hover:bg-blue-100"
+              >
+                {c.label} <span aria-hidden>×</span>
+                <span className="sr-only">(remove)</span>
+              </Link>
+            ))}
+          </div>
+        )}
         </form>
       </div>
 

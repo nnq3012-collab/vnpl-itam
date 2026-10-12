@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
   const format = params.get("format") === "csv" ? "csv" : "xlsx";
 
-  const where = buildDeviceWhere((k) => params.getAll(k));
+  const where = await buildDeviceWhere((k) => params.getAll(k));
 
   const devices = await prisma.device.findMany({
     where,

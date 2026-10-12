@@ -21,7 +21,14 @@ export default function MultiFilter({
   onChange?: (values: string[]) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [checked, setChecked] = useState(selected);
+  const [ownChecked, setOwnChecked] = useState(selected);
+  // With onChange the parent owns the selection (so it can clear it);
+  // in the plain GET form this component keeps it.
+  const checked = onChange ? selected : ownChecked;
+  function update(next: string[]) {
+    setOwnChecked(next);
+    onChange?.(next);
+  }
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -61,6 +68,15 @@ export default function MultiFilter({
       <div
         className={`${open ? "" : "hidden "}absolute z-20 mt-1 max-h-64 min-w-48 overflow-y-auto rounded-md border border-slate-300 bg-white p-2 shadow-lg`}
       >
+        {checked.length > 0 && (
+          <button
+            type="button"
+            onClick={() => update([])}
+            className="mb-1 w-full text-left px-1 py-0.5 text-xs font-medium text-blue-700 hover:underline"
+          >
+            Clear ({checked.length})
+          </button>
+        )}
         {options.length === 0 && <p className="text-xs text-slate-600 px-1">None yet</p>}
         {options.map((o) => (
           <label
@@ -72,11 +88,7 @@ export default function MultiFilter({
               name={name}
               value={o.value}
               checked={checked.includes(o.value)}
-              onChange={(e) => {
-                const next = e.target.checked ? [...checked, o.value] : checked.filter((v) => v !== o.value);
-                setChecked(next);
-                onChange?.(next);
-              }}
+              onChange={(e) => update(e.target.checked ? [...checked, o.value] : checked.filter((v) => v !== o.value))}
               className="h-4 w-4"
             />
             {o.label}

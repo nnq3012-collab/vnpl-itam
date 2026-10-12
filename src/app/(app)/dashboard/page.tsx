@@ -181,7 +181,7 @@ export default async function DashboardPage({
       </div>
 
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-sm font-medium text-slate-700 mb-3">Quick search by Asset ID</h2>
+        <h2 className="text-sm font-medium text-slate-700 mb-3">Quick search — Asset ID, serial, model, or user name</h2>
         <SearchBox />
       </div>
 
