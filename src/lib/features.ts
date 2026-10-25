@@ -19,6 +19,24 @@ export const FEATURES: FeatureDefinition[] = [
     defaultRoles: ["IT", "HR"],
   },
   {
+    key: "devices.edit",
+    label: "Edit Device",
+    description: "Change any field of a single device in Update Device — type, specs, status, location, vendor, price, purchase year.",
+    defaultRoles: ["IT"],
+  },
+  {
+    key: "devices.assign",
+    label: "Assign Device",
+    description: "Change a device's Assigned User and that employee's Status in Update Device.",
+    defaultRoles: ["IT", "HR"],
+  },
+  {
+    key: "devices.maintenance",
+    label: "Log Maintenance",
+    description: "Record maintenance events (repair, cleaning, part replacement, ...) on a device.",
+    defaultRoles: ["IT"],
+  },
+  {
     key: "import.devices",
     label: "Import Devices",
     description: "Bulk-import devices from an Excel/CSV file.",
@@ -49,8 +67,6 @@ export const FEATURES: FeatureDefinition[] = [
     defaultRoles: ["IT", "HR"],
   },
 ];
-
-export const FEATURE_KEYS = FEATURES.map((f) => f.key);
 
 export function featureDefinition(key: string): FeatureDefinition | undefined {
   return FEATURES.find((f) => f.key === key);

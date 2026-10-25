@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getSession } from "@/lib/session";
-import { canUseFeature } from "@/lib/feature-access";
+import { getAllFeatureRoles } from "@/lib/feature-access";
 import { canConfigureFeatures } from "@/lib/rbac";
 import NavDropdown from "./nav-dropdown";
 import AdminMenu from "./admin-menu";
@@ -10,18 +10,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const [canRegister, canManageTypesAndVendors, canManageEmployeesAndLocations, canImportAnything] = await Promise.all([
-    canUseFeature(session.role, "devices.register"),
-    canUseFeature(session.role, "reference.deviceTypesAndVendors"),
-    canUseFeature(session.role, "reference.employeesAndLocations"),
-    Promise.all([
-      canUseFeature(session.role, "import.devices"),
-      canUseFeature(session.role, "import.employees"),
-    ]).then(([a, b]) => a || b),
-  ]);
+  // One query for every feature instead of one per nav item.
+  const featureRoles = await getAllFeatureRoles();
+  const can = (key: string) => featureRoles[key].includes(session.role);
+  const canRegister = can("devices.register");
+  const canImportAnything = can("import.devices") || can("import.employees");
   const canConfigure = canConfigureFeatures(session.username);
-  const canUpdate = session.role === "IT" || session.role === "HR";
-  const canManageReference = canManageTypesAndVendors || canManageEmployeesAndLocations;
+  const canUpdate = can("devices.edit") || can("devices.assign");
+  const canManageReference = can("reference.deviceTypesAndVendors") || can("reference.employeesAndLocations");
 
   const devicesGroup = [
     { href: "/devices", label: "Device Master" },
@@ -53,12 +49,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               {dataGroup.length > 0 && <NavDropdown label="Data" items={dataGroup} />}
             </nav>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-slate-500">
-              {session.fullName} <span className="text-slate-500">({session.role})</span>
-            </span>
-            <AdminMenu showConfiguration={canConfigure} />
-          </div>
+          <AdminMenu label={`${session.fullName} (${session.role})`} showConfiguration={canConfigure} />
         </div>
       </header>
       <main className="print:max-w-none print:p-0 max-w-6xl mx-auto px-6 py-6">{children}</main>

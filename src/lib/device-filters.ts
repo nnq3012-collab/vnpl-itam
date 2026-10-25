@@ -77,9 +77,20 @@ export async function buildDeviceWhere(get: (key: string) => string[]): Promise<
  * and reason. Employee names typed without accents are expanded to their
  * exact spelling first, since log text embeds names with accents. */
 export async function auditLogSearchWhere(q: string): Promise<Prisma.AuditLogWhereInput> {
-  const terms = [q.trim(), ...(await employeeNamesMatching(q))];
+  const term = q.trim();
   const fields = ["assetId", "previousState", "newState", "operator", "reason"] as const;
+  // Employee names only ever appear in the Before/Details text, so expanded
+  // names are matched there only.
+  // ponytail: still one ILIKE pair per matching name — a common word ("nguyen")
+  // expands to many; switch to the unaccent extension if log search gets slow.
+  const names = await employeeNamesMatching(q);
   return {
-    OR: terms.flatMap((t) => fields.map((f) => ({ [f]: { contains: t, mode: "insensitive" as const } }))),
+    OR: [
+      ...fields.map((f) => ({ [f]: { contains: term, mode: "insensitive" as const } })),
+      ...names.flatMap((n) => [
+        { previousState: { contains: n, mode: "insensitive" as const } },
+        { newState: { contains: n, mode: "insensitive" as const } },
+      ]),
+    ],
   };
 }

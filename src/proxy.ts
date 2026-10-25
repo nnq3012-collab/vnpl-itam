@@ -1,16 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
+import { SESSION_COOKIE, getSecretKey } from "@/lib/session-token";
 
-const SESSION_COOKIE = "itam_session";
 const PUBLIC_PATHS = ["/login", "/api/auth/login"];
 
-function getSecretKey() {
-  const secret = process.env.SESSION_SECRET;
-  if (!secret) throw new Error("SESSION_SECRET environment variable is not set");
-  return new TextEncoder().encode(secret);
-}
-
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (PUBLIC_PATHS.some((p) => pathname === p) || pathname.startsWith("/_next") || pathname.startsWith("/favicon")) {

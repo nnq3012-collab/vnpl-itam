@@ -2,13 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireFeature } from "@/lib/api-guard";
 import { AuditAction, DeviceStatus } from "@prisma/client";
-
-const REASON_REQUIRED_STATUSES: DeviceStatus[] = [
-  DeviceStatus.LOST,
-  DeviceStatus.STOLEN,
-  DeviceStatus.BROKEN,
-  DeviceStatus.RETIRED,
-];
+import { REASON_REQUIRED_STATUSES } from "@/lib/statuses";
+import { priceOrNull, recordChange, textOrNull, yearOrNull } from "@/lib/device-changes";
 
 export async function POST(request: NextRequest) {
   const guard = await requireFeature("devices.bulkEdit");
@@ -56,7 +51,7 @@ export async function POST(request: NextRequest) {
     if (!Object.values(DeviceStatus).includes(body.status as DeviceStatus)) {
       return NextResponse.json({ error: "Invalid Status" }, { status: 400 });
     }
-    if (REASON_REQUIRED_STATUSES.includes(body.status as DeviceStatus) && !reason) {
+    if (REASON_REQUIRED_STATUSES.includes(body.status) && !reason) {
       return NextResponse.json(
         { error: "Reason is required when setting Status to Lost, Stolen, Broken, or Retired" },
         { status: 400 }
@@ -92,9 +87,8 @@ export async function POST(request: NextRequest) {
     const deviceUpdate: Record<string, unknown> = {};
     const changes: string[] = [];
 
-    if ("makeModel" in body && body.makeModel !== device.makeModel) {
-      deviceUpdate.makeModel = body.makeModel || null;
-      changes.push(`Make/Model: ${device.makeModel ?? "—"} → ${body.makeModel || "—"}`);
+    if ("makeModel" in body) {
+      recordChange(deviceUpdate, changes, "makeModel", "Make/Model", device.makeModel, textOrNull(body.makeModel));
     }
     if (sharedLocationId && sharedLocationId !== device.locationId) {
       deviceUpdate.locationId = sharedLocationId;
@@ -112,19 +106,11 @@ export async function POST(request: NextRequest) {
       }
     }
     if ("price" in body) {
-      const newPrice = typeof body.price === "number" && body.price >= 0 ? body.price : null;
-      if (newPrice !== (device.price ? Number(device.price) : null)) {
-        deviceUpdate.price = newPrice;
-        changes.push(`Price: ${device.price ?? "—"} → ${newPrice ?? "—"}`);
-      }
+      const before = device.price == null ? null : Number(device.price);
+      recordChange(deviceUpdate, changes, "price", "Price", before, priceOrNull(body.price));
     }
     if ("purchaseYear" in body) {
-      const newPurchaseYear =
-        typeof body.purchaseYear === "number" && Number.isInteger(body.purchaseYear) ? body.purchaseYear : null;
-      if (newPurchaseYear !== device.purchaseYear) {
-        deviceUpdate.purchaseYear = newPurchaseYear;
-        changes.push(`Purchase Year: ${device.purchaseYear ?? "—"} → ${newPurchaseYear ?? "—"}`);
-      }
+      recordChange(deviceUpdate, changes, "purchaseYear", "Purchase Year", device.purchaseYear, yearOrNull(body.purchaseYear));
     }
 
     if (batch) {

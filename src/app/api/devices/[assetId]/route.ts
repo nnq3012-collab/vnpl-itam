@@ -1,18 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
-import { AuditAction, DeviceStatus, EmployeeStatus, Role } from "@prisma/client";
+import { AuditAction, DeviceStatus, EmployeeStatus } from "@prisma/client";
 import { canDeleteDevices } from "@/lib/rbac";
+import { canUseFeature } from "@/lib/feature-access";
+import { REASON_REQUIRED_STATUSES } from "@/lib/statuses";
+import { priceOrNull, recordChange, textOrNull, yearOrNull } from "@/lib/device-changes";
 import { deleteDeviceWithSnapshot } from "@/lib/device-deletion";
 
-const REASON_REQUIRED_STATUSES: DeviceStatus[] = [
-  DeviceStatus.LOST,
-  DeviceStatus.STOLEN,
-  DeviceStatus.BROKEN,
-  DeviceStatus.RETIRED,
-];
+const TEXT_FIELDS = [
+  ["makeModel", "Make/Model"],
+  ["cpu", "CPU"],
+  ["ram", "RAM"],
+  ["storage", "Storage"],
+  ["serialNumber", "Serial Number"],
+] as const;
 
-const IT_ONLY_FIELDS = [
+const ASSIGN_FIELDS =["assignedUserId", "employeeStatus"] as const;
+
+const EDIT_FIELDS = [
   "deviceTypeId",
   "makeModel",
   "cpu",
@@ -45,30 +51,17 @@ export async function DELETE(
   return NextResponse.json({ ok: true });
 }
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ assetId: string }> }
-) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const { assetId } = await params;
-  const device = await prisma.device.findUnique({
-    where: { assetId },
-    include: { deviceType: true, location: true, assignedUser: true, vendor: true },
-  });
-  if (!device) return NextResponse.json({ error: "Device not found" }, { status: 404 });
-
-  return NextResponse.json({ device });
-}
-
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ assetId: string }> }
 ) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (session.role === Role.FINANCE) {
+  const [canEditAll, canAssign] = await Promise.all([
+    canUseFeature(session.role, "devices.edit"),
+    canUseFeature(session.role, "devices.assign"),
+  ]);
+  if (!canEditAll && !canAssign) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -84,46 +77,32 @@ export async function PUT(
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  if (session.role === Role.HR) {
-    const disallowed = IT_ONLY_FIELDS.filter((f) => f in body);
-    if (disallowed.length > 0) {
-      return NextResponse.json(
-        { error: `HR can only edit Assigned User and Employee Status. Not allowed: ${disallowed.join(", ")}` },
-        { status: 403 }
-      );
-    }
+  const disallowed = [
+    ...(canEditAll ? [] : EDIT_FIELDS),
+    ...(canAssign ? [] : ASSIGN_FIELDS),
+  ].filter((f) => f in body);
+  if (disallowed.length > 0) {
+    return NextResponse.json(
+      { error: `Your role is not allowed to change: ${disallowed.join(", ")}` },
+      { status: 403 }
+    );
   }
 
   const changes: string[] = [];
   const deviceUpdate: Record<string, unknown> = {};
 
-  // --- IT-only device fields ---
-  if (session.role === Role.IT) {
+  // --- Device fields (devices.edit) ---
+  if (canEditAll) {
     if (typeof body.deviceTypeId === "string" && body.deviceTypeId !== device.deviceTypeId) {
       const dt = await prisma.deviceType.findUnique({ where: { id: body.deviceTypeId } });
       if (!dt) return NextResponse.json({ error: "Invalid Device Type" }, { status: 400 });
       deviceUpdate.deviceTypeId = body.deviceTypeId;
       changes.push(`Device Type: ${device.deviceType.name} → ${dt.name}`);
     }
-    if ("makeModel" in body && body.makeModel !== device.makeModel) {
-      deviceUpdate.makeModel = body.makeModel || null;
-      changes.push(`Make/Model: ${device.makeModel ?? "—"} → ${body.makeModel || "—"}`);
-    }
-    if ("cpu" in body && body.cpu !== device.cpu) {
-      deviceUpdate.cpu = body.cpu || null;
-      changes.push(`CPU: ${device.cpu ?? "—"} → ${body.cpu || "—"}`);
-    }
-    if ("ram" in body && body.ram !== device.ram) {
-      deviceUpdate.ram = body.ram || null;
-      changes.push(`RAM: ${device.ram ?? "—"} → ${body.ram || "—"}`);
-    }
-    if ("storage" in body && body.storage !== device.storage) {
-      deviceUpdate.storage = body.storage || null;
-      changes.push(`Storage: ${device.storage ?? "—"} → ${body.storage || "—"}`);
-    }
-    if ("serialNumber" in body && body.serialNumber !== device.serialNumber) {
-      deviceUpdate.serialNumber = body.serialNumber || null;
-      changes.push(`Serial Number: ${device.serialNumber ?? "—"} → ${body.serialNumber || "—"}`);
+    // Blank input is stored as null, so compare after normalizing — otherwise
+    // "" vs null logs a no-op "— → —" change on every save.
+    for (const [key, label] of TEXT_FIELDS) {
+      if (key in body) recordChange(deviceUpdate, changes, key, label, device[key], textOrNull(body[key]));
     }
     if (typeof body.center === "string" && typeof body.department === "string") {
       if (body.center !== device.location.center || body.department !== device.location.department) {
@@ -144,7 +123,7 @@ export async function PUT(
         return NextResponse.json({ error: "Invalid Status" }, { status: 400 });
       }
       const reason = typeof body.reason === "string" ? body.reason.trim() : "";
-      if (REASON_REQUIRED_STATUSES.includes(body.status as DeviceStatus) && !reason) {
+      if (REASON_REQUIRED_STATUSES.includes(body.status) && !reason) {
         return NextResponse.json(
           { error: "Reason is required when setting Status to Lost, Stolen, Broken, or Retired" },
           { status: 400 }
@@ -167,23 +146,15 @@ export async function PUT(
       }
     }
     if ("price" in body) {
-      const newPrice = typeof body.price === "number" && body.price >= 0 ? body.price : null;
-      if (newPrice !== (device.price ? Number(device.price) : null)) {
-        deviceUpdate.price = newPrice;
-        changes.push(`Price: ${device.price ?? "—"} → ${newPrice ?? "—"}`);
-      }
+      const before = device.price == null ? null : Number(device.price);
+      recordChange(deviceUpdate, changes, "price", "Price", before, priceOrNull(body.price));
     }
     if ("purchaseYear" in body) {
-      const newPurchaseYear =
-        typeof body.purchaseYear === "number" && Number.isInteger(body.purchaseYear) ? body.purchaseYear : null;
-      if (newPurchaseYear !== device.purchaseYear) {
-        deviceUpdate.purchaseYear = newPurchaseYear;
-        changes.push(`Purchase Year: ${device.purchaseYear ?? "—"} → ${newPurchaseYear ?? "—"}`);
-      }
+      recordChange(deviceUpdate, changes, "purchaseYear", "Purchase Year", device.purchaseYear, yearOrNull(body.purchaseYear));
     }
   }
 
-  // --- Assigned User (IT + HR) ---
+  // --- Assigned User (devices.assign) ---
   let assignedUserChanged = false;
   if ("assignedUserId" in body) {
     const newAssignedUserId: string | null = body.assignedUserId || null;
@@ -211,8 +182,8 @@ export async function PUT(
     }
   }
 
-  // --- Employee Status (IT + HR) — applies to whichever employee ends up assigned ---
-  let employeeStatusChangeNote: string | null = null;
+  // --- Employee Status (devices.assign) — applies to whichever employee ends up assigned ---
+  let employeeStatusUpdate: { id: string; status: EmployeeStatus } | null = null;
   if (typeof body.employeeStatus === "string") {
     if (!Object.values(EmployeeStatus).includes(body.employeeStatus as EmployeeStatus)) {
       return NextResponse.json({ error: "Invalid Employee Status" }, { status: 400 });
@@ -227,12 +198,8 @@ export async function PUT(
     const employee = await prisma.employee.findUnique({ where: { id: targetEmployeeId } });
     if (!employee) return NextResponse.json({ error: "Invalid Assigned User" }, { status: 400 });
     if (employee.status !== body.employeeStatus) {
-      await prisma.employee.update({
-        where: { id: targetEmployeeId },
-        data: { status: body.employeeStatus },
-      });
-      employeeStatusChangeNote = `Employee Status (${employee.fullName}): ${employee.status} → ${body.employeeStatus}`;
-      changes.push(employeeStatusChangeNote);
+      employeeStatusUpdate = { id: targetEmployeeId, status: body.employeeStatus as EmployeeStatus };
+      changes.push(`Employee Status (${employee.fullName}): ${employee.status} → ${body.employeeStatus}`);
     }
   }
 
@@ -240,30 +207,36 @@ export async function PUT(
     return NextResponse.json({ error: "No changes submitted" }, { status: 400 });
   }
 
-  const updatedDevice =
-    Object.keys(deviceUpdate).length > 0
-      ? await prisma.device.update({
-          where: { id: device.id },
-          data: deviceUpdate,
-          include: { deviceType: true, location: true, assignedUser: true, vendor: true },
-        })
-      : device;
-
   let action: AuditAction = AuditAction.LIFECYCLE_UPDATE;
   if ("status" in deviceUpdate) action = AuditAction.LIFECYCLE_UPDATE;
   else if (assignedUserChanged) action = AuditAction.REASSIGNMENT;
   else if (["deviceTypeId", "makeModel", "cpu", "ram", "storage", "serialNumber"].some((k) => k in deviceUpdate))
     action = AuditAction.HARDWARE_CHANGE;
 
-  await prisma.auditLog.create({
-    data: {
-      assetId: device.assetId,
-      action,
-      previousState: `Before: ${device.status} — ${device.assignedUser?.fullName ?? "Unassigned"}`,
-      newState: changes.join("; "),
-      operator: session.fullName,
-      reason: typeof body.reason === "string" && body.reason.trim() ? body.reason.trim() : null,
-    },
+  // Employee status, device, and its log entry are written together or not at all.
+  const updatedDevice = await prisma.$transaction(async (tx) => {
+    if (employeeStatusUpdate) {
+      await tx.employee.update({ where: { id: employeeStatusUpdate.id }, data: { status: employeeStatusUpdate.status } });
+    }
+    const updated =
+      Object.keys(deviceUpdate).length > 0
+        ? await tx.device.update({
+            where: { id: device.id },
+            data: deviceUpdate,
+            include: { deviceType: true, location: true, assignedUser: true, vendor: true },
+          })
+        : device;
+    await tx.auditLog.create({
+      data: {
+        assetId: device.assetId,
+        action,
+        previousState: `Before: ${device.status} — ${device.assignedUser?.fullName ?? "Unassigned"}`,
+        newState: changes.join("; "),
+        operator: session.fullName,
+        reason: typeof body.reason === "string" && body.reason.trim() ? body.reason.trim() : null,
+      },
+    });
+    return updated;
   });
 
   return NextResponse.json({ device: updatedDevice });

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireIT } from "@/lib/api-guard";
+import { requireFeature } from "@/lib/api-guard";
 import { AuditAction } from "@prisma/client";
 import { formatMaintenanceDescription, MAINTENANCE_CATEGORIES } from "@/lib/audit-log-display";
 
@@ -8,7 +8,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ assetId: string }> }
 ) {
-  const guard = await requireIT();
+  const guard = await requireFeature("devices.maintenance");
   if ("error" in guard) return guard.error;
 
   const { assetId } = await params;

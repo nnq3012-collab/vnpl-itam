@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Combobox from "../combobox";
 import MaintenanceForm from "../[assetId]/maintenance-form";
 import BatchPanel from "./batch-panel";
+import { EMPLOYEE_STATUS_LABELS, REASON_REQUIRED_STATUSES, STATUS_LABELS, statusLabel } from "@/lib/statuses";
 
 type DeviceRow = {
   id: string;
@@ -32,99 +33,58 @@ type DeviceType = { id: string; name: string; hasSpecs: boolean };
 type Location = { id: string; center: string; department: string };
 type Employee = { id: string; fullName: string; email: string | null; employeeId: string; status: string };
 type Vendor = { id: string; name: string };
+type Asset = { id: string; assetId: string; deviceTypeName: string; status: string };
 
-const STATUS_OPTIONS = ["IN_STOCK", "DEPLOYED", "IN_REPAIR", "LOST", "STOLEN", "BROKEN", "RETIRED"];
-const REASON_REQUIRED = new Set(["LOST", "STOLEN", "BROKEN", "RETIRED"]);
-const EMPLOYEE_STATUS_OPTIONS = ["ACTIVE", "RESIGNED", "TRANSFERRED"];
+type Permissions = { canEditAll: boolean; canAssign: boolean; canLogMaintenance: boolean };
 
-export default function UpdateDeviceClient({
-  role,
-  devices,
-  deviceTypes,
-  locations,
-  employees,
-  vendors,
-  allBatches,
-  initialAssetId,
-}: {
-  role: "IT" | "HR" | "FINANCE";
-  devices: DeviceRow[];
-  deviceTypes: DeviceType[];
-  locations: Location[];
-  employees: Employee[];
-  vendors: Vendor[];
-  /** Null when this user may not manage batches — hides the Batches panel. */
-  allBatches: string[] | null;
-  initialAssetId?: string;
-}) {
+/** Picking a device navigates to ?assetId=…, where the server loads just
+ * that device for EditForm. */
+export function AssetPicker({ assets }: { assets: Asset[] }) {
   const router = useRouter();
-  const preselected = initialAssetId ? devices.find((d) => d.assetId === initialAssetId) ?? null : null;
-  const [selectedAssetDeviceId, setSelectedAssetDeviceId] = useState<string | null>(preselected?.id ?? null);
-  const device = devices.find((d) => d.id === selectedAssetDeviceId) ?? null;
-
   const assetOptions = useMemo(
-    () => devices.map((d) => ({ id: d.id, label: d.assetId, sublabel: `${d.deviceTypeName} — ${d.status}` })),
-    [devices]
+    () => assets.map((a) => ({ id: a.assetId, label: a.assetId, sublabel: `${a.deviceTypeName} — ${statusLabel(a.status)}` })),
+    [assets]
   );
 
-  if (!device) {
-    return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <label className="block text-sm font-medium text-slate-700 mb-1">Asset ID</label>
-        <Combobox
-          options={assetOptions}
-          value={selectedAssetDeviceId}
-          onChange={setSelectedAssetDeviceId}
-          placeholder="Type an Asset ID to search existing devices..."
-        />
-        <p className="text-xs text-slate-500 mt-2">
-          Only existing, registered devices appear here — this confirms the Asset ID you pick is valid.
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <EditForm
-      key={device.id}
-      role={role}
-      device={device}
-      deviceTypes={deviceTypes}
-      locations={locations}
-      employees={employees}
-      vendors={vendors}
-      allBatches={allBatches}
-      onBack={() => setSelectedAssetDeviceId(null)}
-      onSaved={() => {
-        router.push(`/devices?highlight=${encodeURIComponent(device.assetId)}#row-${encodeURIComponent(device.assetId)}`);
-      }}
-    />
+    <div className="bg-white rounded-lg shadow p-6">
+      <label className="block text-sm font-medium text-slate-700 mb-1">Asset ID</label>
+      <Combobox
+        options={assetOptions}
+        value={null}
+        onChange={(assetId) => assetId && router.push(`/devices/update?assetId=${encodeURIComponent(assetId)}`)}
+        placeholder="Type an Asset ID to search existing devices..."
+      />
+      <p className="text-xs text-slate-500 mt-2">
+        Only existing, registered devices appear here — this confirms the Asset ID you pick is valid.
+      </p>
+    </div>
   );
 }
 
-function EditForm({
-  role,
+export function EditForm({
+  canEditAll,
+  canAssign,
+  canLogMaintenance,
   device,
   deviceTypes,
   locations,
   employees,
   vendors,
   allBatches,
-  onBack,
-  onSaved,
-}: {
-  role: "IT" | "HR" | "FINANCE";
+}: Permissions & {
   device: DeviceRow;
   deviceTypes: DeviceType[];
   locations: Location[];
   employees: Employee[];
   vendors: Vendor[];
+  /** Null when this user may not manage batches — hides the Batches panel. */
   allBatches: string[] | null;
-  onBack: () => void;
-  onSaved: () => void;
 }) {
-  const isIT = role === "IT";
-
+  const router = useRouter();
+  const onBack = () => router.push("/devices/update");
+  const onSaved = () =>
+    router.push(`/devices?highlight=${encodeURIComponent(device.assetId)}#row-${encodeURIComponent(device.assetId)}`);
   const [deviceTypeId, setDeviceTypeId] = useState(device.deviceTypeId);
   const [makeModel, setMakeModel] = useState(device.makeModel ?? "");
   const [cpu, setCpu] = useState(device.cpu ?? "");
@@ -155,7 +115,7 @@ function EditForm({
   );
   const selectedEmployee = employees.find((e) => e.id === assignedUserId) ?? null;
   const selectedDeviceType = deviceTypes.find((t) => t.id === deviceTypeId) ?? null;
-  const reasonRequired = isIT && REASON_REQUIRED.has(status) && status !== device.status;
+  const reasonRequired = canEditAll && REASON_REQUIRED_STATUSES.includes(status) && status !== device.status;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -164,7 +124,7 @@ function EditForm({
     setSubmitting(true);
 
     const payload: Record<string, unknown> = {};
-    if (isIT) {
+    if (canEditAll) {
       payload.deviceTypeId = deviceTypeId;
       payload.makeModel = makeModel;
       payload.cpu = cpu;
@@ -179,8 +139,10 @@ function EditForm({
       payload.purchaseYear = purchaseYear ? Number(purchaseYear) : null;
       if (reason) payload.reason = reason;
     }
-    payload.assignedUserId = assignedUserId;
-    if (employeeStatus) payload.employeeStatus = employeeStatus;
+    if (canAssign) {
+      payload.assignedUserId = assignedUserId;
+      if (employeeStatus) payload.employeeStatus = employeeStatus;
+    }
 
     try {
       const res = await fetch(`/api/devices/${encodeURIComponent(device.assetId)}`, {
@@ -216,9 +178,9 @@ function EditForm({
         </button>
       </div>
 
-      {!isIT && (
+      {!canEditAll && (
         <p className="text-xs text-amber-700 bg-amber-50 rounded-md px-3 py-2">
-          As HR, you can only change the Assigned User and that employee&apos;s Status. Other fields are shown
+          Your role can only change the Assigned User and that employee&apos;s Status. Other fields are shown
           read-only for context.
         </p>
       )}
@@ -228,7 +190,7 @@ function EditForm({
         <select
           value={deviceTypeId}
           onChange={(e) => setDeviceTypeId(e.target.value)}
-          disabled={!isIT}
+          disabled={!canEditAll}
           className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500"
         >
           {deviceTypes.map((t) => (
@@ -243,7 +205,7 @@ function EditForm({
           type="text"
           value={makeModel}
           onChange={(e) => setMakeModel(e.target.value)}
-          disabled={!isIT}
+          disabled={!canEditAll}
           className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500"
         />
       </div>
@@ -252,17 +214,17 @@ function EditForm({
         <div className="grid grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">CPU</label>
-            <input type="text" value={cpu} onChange={(e) => setCpu(e.target.value)} disabled={!isIT}
+            <input type="text" value={cpu} onChange={(e) => setCpu(e.target.value)} disabled={!canEditAll}
               className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500" />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">RAM</label>
-            <input type="text" value={ram} onChange={(e) => setRam(e.target.value)} disabled={!isIT}
+            <input type="text" value={ram} onChange={(e) => setRam(e.target.value)} disabled={!canEditAll}
               className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500" />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Storage</label>
-            <input type="text" value={storage} onChange={(e) => setStorage(e.target.value)} disabled={!isIT}
+            <input type="text" value={storage} onChange={(e) => setStorage(e.target.value)} disabled={!canEditAll}
               className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500" />
           </div>
         </div>
@@ -274,7 +236,7 @@ function EditForm({
           type="text"
           value={serialNumber}
           onChange={(e) => setSerialNumber(e.target.value)}
-          disabled={!isIT}
+          disabled={!canEditAll}
           className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500"
         />
       </div>
@@ -284,11 +246,11 @@ function EditForm({
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value)}
-          disabled={!isIT}
+          disabled={!canEditAll}
           className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500"
         >
-          {STATUS_OPTIONS.map((s) => (
-            <option key={s} value={s}>{s}</option>
+          {Object.entries(STATUS_LABELS).map(([s, label]) => (
+            <option key={s} value={s}>{label}</option>
           ))}
         </select>
       </div>
@@ -314,11 +276,11 @@ function EditForm({
           <select
             value={center}
             onChange={(e) => { setCenter(e.target.value); setDepartment(""); }}
-            disabled={!isIT}
+            disabled={!canEditAll}
             className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500"
           >
-            {!isIT && <option value={center}>{center}</option>}
-            {isIT && centers.map((c) => <option key={c} value={c}>{c}</option>)}
+            {!canEditAll && <option value={center}>{center}</option>}
+            {canEditAll && centers.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
         <div>
@@ -326,11 +288,11 @@ function EditForm({
           <select
             value={department}
             onChange={(e) => setDepartment(e.target.value)}
-            disabled={!isIT}
+            disabled={!canEditAll}
             className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500"
           >
-            {!isIT && <option value={department}>{department}</option>}
-            {isIT && departmentsForCenter.map((d) => <option key={d} value={d}>{d}</option>)}
+            {!canEditAll && <option value={department}>{department}</option>}
+            {canEditAll && departmentsForCenter.map((d) => <option key={d} value={d}>{d}</option>)}
           </select>
         </div>
       </div>
@@ -341,7 +303,7 @@ function EditForm({
           <select
             value={vendorId}
             onChange={(e) => setVendorId(e.target.value)}
-            disabled={!isIT}
+            disabled={!canEditAll}
             className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500"
           >
             <option value="">Select...</option>
@@ -358,7 +320,7 @@ function EditForm({
             step="0.01"
             value={price}
             onChange={(e) => setPrice(e.target.value)}
-            disabled={!isIT}
+            disabled={!canEditAll}
             className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500"
           />
         </div>
@@ -370,7 +332,7 @@ function EditForm({
             max={2100}
             value={purchaseYear}
             onChange={(e) => setPurchaseYear(e.target.value)}
-            disabled={!isIT}
+            disabled={!canEditAll}
             className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500"
           />
         </div>
@@ -378,17 +340,26 @@ function EditForm({
 
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-1">Assigned User</label>
-        <Combobox
-          options={employeeOptions}
-          value={assignedUserId}
-          onChange={(id) => {
-            setAssignedUserId(id);
-            const emp = employees.find((e) => e.id === id);
-            setEmployeeStatus(emp?.status ?? "");
-          }}
-          placeholder="Type a name to search..."
-          allowUnassigned
-        />
+        {canAssign ? (
+          <Combobox
+            options={employeeOptions}
+            value={assignedUserId}
+            onChange={(id) => {
+              setAssignedUserId(id);
+              const emp = employees.find((e) => e.id === id);
+              setEmployeeStatus(emp?.status ?? "");
+            }}
+            placeholder="Type a name to search..."
+            allowUnassigned
+          />
+        ) : (
+          <input
+            type="text"
+            value={selectedEmployee?.fullName ?? "Unassigned"}
+            disabled
+            className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm disabled:bg-slate-50 disabled:text-slate-500"
+          />
+        )}
       </div>
 
       <div>
@@ -401,7 +372,7 @@ function EditForm({
         />
       </div>
 
-      {assignedUserId && (
+      {canAssign && assignedUserId && (
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">Employee Status</label>
           <select
@@ -409,8 +380,8 @@ function EditForm({
             onChange={(e) => setEmployeeStatus(e.target.value)}
             className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm"
           >
-            {EMPLOYEE_STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>{s}</option>
+            {Object.entries(EMPLOYEE_STATUS_LABELS).map(([s, label]) => (
+              <option key={s} value={s}>{label}</option>
             ))}
           </select>
         </div>
@@ -430,7 +401,7 @@ function EditForm({
 
     {allBatches && <BatchPanel assetId={device.assetId} initialBatches={device.batches} allBatches={allBatches} />}
 
-    {isIT && (
+    {canLogMaintenance && (
       <details className="bg-white rounded-lg shadow p-4 group">
         <summary className="text-sm font-medium text-slate-700 cursor-pointer select-none list-none flex items-center gap-1.5">
           <span className="text-slate-500 transition-transform group-open:rotate-90">▶</span>

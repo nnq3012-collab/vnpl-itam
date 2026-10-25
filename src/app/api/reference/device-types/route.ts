@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireFeature } from "@/lib/api-guard";
-
-export async function GET() {
-  const guard = await requireFeature("reference.deviceTypesAndVendors");
-  if ("error" in guard) return guard.error;
-  const deviceTypes = await prisma.deviceType.findMany({ orderBy: { name: "asc" } });
-  return NextResponse.json({ deviceTypes });
-}
+import { Prisma } from "@prisma/client";
 
 export async function POST(request: NextRequest) {
   const guard = await requireFeature("reference.deviceTypesAndVendors");
@@ -22,9 +16,13 @@ export async function POST(request: NextRequest) {
       : null;
   if (!name) return NextResponse.json({ error: "Name is required" }, { status: 400 });
 
-  const existing = await prisma.deviceType.findUnique({ where: { name } });
-  if (existing) return NextResponse.json({ error: `"${name}" already exists` }, { status: 409 });
-
-  const deviceType = await prisma.deviceType.create({ data: { name, hasSpecs, depreciationMonths } });
-  return NextResponse.json({ deviceType }, { status: 201 });
+  try {
+    const deviceType = await prisma.deviceType.create({ data: { name, hasSpecs, depreciationMonths } });
+    return NextResponse.json({ deviceType }, { status: 201 });
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return NextResponse.json({ error: `"${name}" already exists` }, { status: 409 });
+    }
+    throw e;
+  }
 }

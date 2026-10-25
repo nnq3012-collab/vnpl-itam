@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import MultiFilter from "../../devices/multi-filter";
 import { matchesSearch } from "@/lib/search";
+import { EMPLOYEE_STATUS_LABELS } from "@/lib/statuses";
 
 type Employee = {
   id: string;
@@ -16,7 +17,7 @@ type Employee = {
 };
 type Location = { id: string; center: string; department: string };
 
-const STATUS_OPTIONS = ["ACTIVE", "RESIGNED", "TRANSFERRED"];
+const STATUS_OPTIONS = Object.entries(EMPLOYEE_STATUS_LABELS).map(([value, label]) => ({ value, label }));
 const DETAILS_OPTIONS = [
   { value: "missing", label: "Missing Center/Department" },
   { value: "complete", label: "Complete" },
@@ -284,7 +285,7 @@ export default function EmployeesClient({ initial, locations }: { initial: Emplo
             className="w-64 rounded-md border border-slate-400 px-3 py-1.5 text-sm"
           />
         </div>
-        <MultiFilter label="Status" name="status" options={STATUS_OPTIONS.map((s) => ({ value: s, label: s }))}
+        <MultiFilter label="Status" name="status" options={STATUS_OPTIONS}
           selected={filters.status} onChange={(v) => setFilters({ ...filters, status: v })} />
         <MultiFilter label="Center" name="center" options={centers.map((c) => ({ value: c, label: c }))}
           selected={filters.center} onChange={(v) => setFilters({ ...filters, center: v })} />
@@ -318,7 +319,7 @@ export default function EmployeesClient({ initial, locations }: { initial: Emplo
           </label>
           <select value={bulk.status} disabled={!bulk.useStatus} onChange={(e) => setBulk({ ...bulk, status: e.target.value })}
             className="rounded-md border border-slate-400 px-2 py-1 text-sm disabled:opacity-50">
-            {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+            {STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
           <label className="flex items-center gap-1.5 text-slate-900 cursor-pointer ml-2">
             <input type="checkbox" checked={bulk.useLocation} onChange={(e) => setBulk({ ...bulk, useLocation: e.target.checked })} className="h-4 w-4" />
@@ -428,7 +429,7 @@ export default function EmployeesClient({ initial, locations }: { initial: Emplo
                     <td className="py-2 pr-2">
                       <select value={edits[item.id].status} onChange={(e) => setEditField(item.id, { status: e.target.value })}
                         className="w-full rounded-md border border-slate-400 px-2 py-1 text-sm">
-                        {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                        {STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                       </select>
                     </td>
                     <td className="py-2 text-right whitespace-nowrap">

@@ -3,12 +3,11 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+import { REASON_REQUIRED_STATUSES, STATUS_LABELS } from "@/lib/statuses";
 
 type Vendor = { id: string; name: string };
 type Location = { id: string; center: string; department: string };
 
-const STATUS_OPTIONS = ["IN_STOCK", "DEPLOYED", "IN_REPAIR", "LOST", "STOLEN", "BROKEN", "RETIRED"];
-const REASON_REQUIRED = new Set(["LOST", "STOLEN", "BROKEN", "RETIRED"]);
 
 function getSelectedAssetIds(): string[] {
   const checked = document.querySelectorAll<HTMLInputElement>(
@@ -162,9 +161,9 @@ export default function BulkEditPanel({
             <form onSubmit={handleSubmit} className="space-y-4">
               <FieldToggle label="Status" checked={useStatus} onChange={setUseStatus}>
                 <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full rounded-md border border-slate-400 px-3 py-2 text-sm">
-                  {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                  {Object.entries(STATUS_LABELS).map(([s, label]) => <option key={s} value={s}>{label}</option>)}
                 </select>
-                {REASON_REQUIRED.has(status) && (
+                {REASON_REQUIRED_STATUSES.includes(status) && (
                   <textarea
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}

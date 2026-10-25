@@ -3,13 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { requireFeature } from "@/lib/api-guard";
 import { EmployeeStatus, Prisma } from "@prisma/client";
 
-export async function GET() {
-  const guard = await requireFeature("reference.employeesAndLocations");
-  if ("error" in guard) return guard.error;
-  const employees = await prisma.employee.findMany({ include: { location: true }, orderBy: { fullName: "asc" } });
-  return NextResponse.json({ employees });
-}
-
 export async function POST(request: NextRequest) {
   const guard = await requireFeature("reference.employeesAndLocations");
   if ("error" in guard) return guard.error;

@@ -1,19 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
-import { DeviceStatus } from "@prisma/client";
 import { buildDeviceWhere } from "@/lib/device-filters";
-import * as XLSX from "xlsx";
-
-const STATUS_LABELS: Record<DeviceStatus, string> = {
-  IN_STOCK: "In Stock",
-  DEPLOYED: "Deployed",
-  IN_REPAIR: "In Repair",
-  LOST: "Lost",
-  STOLEN: "Stolen",
-  BROKEN: "Broken",
-  RETIRED: "Retired",
-};
+import { STATUS_LABELS } from "@/lib/statuses";
+import { spreadsheetResponse } from "@/lib/spreadsheet";
 
 export async function GET(request: NextRequest) {
   const session = await getSession();
@@ -51,28 +41,5 @@ export async function GET(request: NextRequest) {
     "Last Updated": d.lastUpdated.toISOString().slice(0, 10),
   }));
 
-  const worksheet = XLSX.utils.json_to_sheet(rows);
-  const filename = `device-master-export-${new Date().toISOString().slice(0, 10)}.${format}`;
-
-  if (format === "csv") {
-    const csv = XLSX.utils.sheet_to_csv(worksheet);
-    // BOM so Excel opens the CSV as UTF-8 (Vietnamese names otherwise garble).
-    return new NextResponse(String.fromCharCode(0xfeff) + csv, {
-      headers: {
-        "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="${filename}"`,
-      },
-    });
-  }
-
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "DeviceMaster");
-  const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
-
-  return new NextResponse(buffer, {
-    headers: {
-      "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": `attachment; filename="${filename}"`,
-    },
-  });
+  return spreadsheetResponse(rows, "DeviceMaster", `device-master-export-${new Date().toISOString().slice(0, 10)}`, format);
 }

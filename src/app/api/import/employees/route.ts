@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireFeature } from "@/lib/api-guard";
+import { Prisma } from "@prisma/client";
 
 type ImportRow = {
   employeeId: string;
@@ -25,6 +26,24 @@ export async function POST(request: NextRequest) {
     unresolvedDepartments: new Set<string>(),
   };
 
+  // Look up locations and existing employees once, up front, instead of
+  // several queries per row.
+  const [allLocations, existingEmployees] = await Promise.all([
+    prisma.location.findMany({ select: { id: true, center: true, department: true } }),
+    prisma.employee.findMany({
+      where: { employeeId: { in: rows.map((r) => r.employeeId?.trim()).filter(Boolean) } },
+      select: { employeeId: true },
+    }),
+  ]);
+  const locationIdByPair = new Map(allLocations.map((l) => [`${l.center}\u0000${l.department}`, l.id]));
+  const locationsByDepartment = new Map<string, string[]>();
+  for (const l of allLocations) locationsByDepartment.set(l.department, [...(locationsByDepartment.get(l.department) ?? []), l.id]);
+  const existingIds = new Set(existingEmployees.map((e) => e.employeeId));
+
+  // Keyed by Employee ID so a repeat later in the file overrides the earlier row.
+  const creates = new Map<string, Prisma.EmployeeCreateManyInput>();
+  const updates = new Map<string, Prisma.EmployeeUpdateInput>();
+
   for (const row of rows) {
     const employeeId = row.employeeId?.trim();
     const fullName = row.fullName?.trim();
@@ -41,11 +60,9 @@ export async function POST(request: NextRequest) {
 
     if (centerText && departmentText) {
       // Center + Department both given — exact, unambiguous match.
-      const location = await prisma.location.findUnique({
-        where: { center_department: { center: centerText, department: departmentText } },
-      });
-      if (location) {
-        locationId = location.id;
+      const id = locationIdByPair.get(`${centerText}\u0000${departmentText}`);
+      if (id) {
+        locationId = id;
       } else {
         results.unresolvedDepartments.add(`${centerText} / ${departmentText}`);
       }
@@ -53,9 +70,9 @@ export async function POST(request: NextRequest) {
       // Only Department given — fall back to matching by Department alone,
       // but only when that Department is unambiguous (exists under exactly
       // one Center). Otherwise leave unresolved rather than guessing.
-      const matches = await prisma.location.findMany({ where: { department: departmentText } });
+      const matches = locationsByDepartment.get(departmentText) ?? [];
       if (matches.length === 1) {
-        locationId = matches[0].id;
+        locationId = matches[0];
       } else if (matches.length === 0) {
         results.unresolvedDepartments.add(departmentText);
       } else {
@@ -63,25 +80,34 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const existing = await prisma.employee.findUnique({ where: { employeeId } });
-    if (existing) {
+    const pendingCreate = creates.get(employeeId);
+    if (existingIds.has(employeeId)) {
       // Name/Email are refreshed from the file; Status is deliberately left
       // untouched so HR's Active/Resigned/Transferred flags survive
       // re-imports of a stale roster export. Location is only overwritten
       // when this row resolved to a valid one — a blank/unresolved location
       // in the file never wipes an employee's existing location.
-      await prisma.employee.update({
-        where: { employeeId },
-        data: { fullName, email, ...(locationId ? { locationId } : {}) },
+      updates.set(employeeId, {
+        ...updates.get(employeeId),
+        fullName,
+        email,
+        ...(locationId ? { location: { connect: { id: locationId } } } : {}),
       });
       results.updated++;
+    } else if (pendingCreate) {
+      // Repeat of a new employee earlier in the file — same rules as above.
+      creates.set(employeeId, { ...pendingCreate, fullName, email, ...(locationId ? { locationId } : {}) });
+      results.updated++;
     } else {
-      await prisma.employee.create({
-        data: { employeeId, fullName, email, locationId },
-      });
+      creates.set(employeeId, { employeeId, fullName, email, locationId });
       results.created++;
     }
   }
+
+  await prisma.$transaction([
+    prisma.employee.createMany({ data: [...creates.values()] }),
+    ...[...updates].map(([employeeId, data]) => prisma.employee.update({ where: { employeeId }, data })),
+  ]);
 
   return NextResponse.json({
     created: results.created,

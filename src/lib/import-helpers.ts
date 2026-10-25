@@ -17,8 +17,3 @@ export function normalizeStatus(raw: string | undefined | null): DeviceStatus {
   const key = raw.trim().toLowerCase();
   return STATUS_ALIASES[key] ?? DeviceStatus.IN_STOCK;
 }
-
-export function isKnownStatus(raw: string | undefined | null): boolean {
-  if (!raw) return true; // blank is fine, defaults to In Stock
-  return raw.trim().toLowerCase() in STATUS_ALIASES;
-}

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 
-export default function AdminMenu({ showConfiguration }: { showConfiguration: boolean }) {
+export default function AdminMenu({ label, showConfiguration }: { label: string; showConfiguration: boolean }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -33,7 +33,7 @@ export default function AdminMenu({ showConfiguration }: { showConfiguration: bo
         onClick={() => setOpen((o) => !o)}
         className={`text-sm inline-flex items-center gap-1 ${isActive ? "text-slate-900 font-medium" : "text-slate-600 hover:text-slate-900"}`}
       >
-        IT Admin (IT)
+        {label}
         <span className="text-xs text-slate-500">▾</span>
       </button>
       {open && (

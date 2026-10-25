@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { DeviceStatus, Prisma, Role } from "@prisma/client";
+import { AuditAction, Prisma } from "@prisma/client";
+import { STATUS_BADGE, STATUS_LABELS, statusLabel } from "@/lib/statuses";
 import { getSession } from "@/lib/session";
 import { canDeleteDevices } from "@/lib/rbac";
 import { canUseFeature } from "@/lib/feature-access";
@@ -10,26 +11,6 @@ import BulkEditPanel from "./bulk-edit-panel";
 import MultiFilter from "./multi-filter";
 import { buildDeviceWhere } from "@/lib/device-filters";
 import ReorderableTable, { type TableColumn, type TableRow } from "@/components/reorderable-table";
-
-const STATUS_LABELS: Record<DeviceStatus, string> = {
-  IN_STOCK: "In Stock",
-  DEPLOYED: "Deployed",
-  IN_REPAIR: "In Repair",
-  LOST: "Lost",
-  STOLEN: "Stolen",
-  BROKEN: "Broken",
-  RETIRED: "Retired",
-};
-
-const STATUS_BADGE: Record<DeviceStatus, string> = {
-  IN_STOCK: "bg-blue-50 text-blue-700",
-  DEPLOYED: "bg-green-50 text-green-700",
-  IN_REPAIR: "bg-amber-50 text-amber-700",
-  LOST: "bg-red-50 text-red-700",
-  STOLEN: "bg-red-50 text-red-700",
-  BROKEN: "bg-red-50 text-red-700",
-  RETIRED: "bg-slate-100 text-slate-700",
-};
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 
@@ -72,9 +53,15 @@ export default async function DevicesPage({
 }) {
   const params = await searchParams;
   const session = await getSession();
-  const canEdit = session?.role === Role.IT || session?.role === Role.HR;
   const canDelete = canDeleteDevices(session?.username);
-  const canBulkEdit = session ? await canUseFeature(session.role, "devices.bulkEdit") : false;
+  const [canEditAll, canAssign, canBulkEdit] = session
+    ? await Promise.all([
+        canUseFeature(session.role, "devices.edit"),
+        canUseFeature(session.role, "devices.assign"),
+        canUseFeature(session.role, "devices.bulkEdit"),
+      ])
+    : [false, false, false];
+  const canEdit = canEditAll || canAssign;
 
   const where = await buildDeviceWhere((k) => all(params[k]));
   const searchText = first(params.q) ?? first(params.assetId) ?? "";
@@ -110,8 +97,12 @@ export default async function DevicesPage({
     return { remainingValue, fullyDepreciated };
   }
 
+  // Only creation events — not every log row — then the earliest per device.
   const creationLogs = await prisma.auditLog.findMany({
-    where: { assetId: { in: devices.map((d) => d.assetId) } },
+    where: {
+      assetId: { in: devices.map((d) => d.assetId) },
+      action: { in: [AuditAction.INITIAL_REGISTRATION, AuditAction.BULK_IMPORT] },
+    },
     orderBy: { timestamp: "asc" },
     select: { assetId: true, operator: true },
   });
@@ -139,7 +130,7 @@ export default async function DevicesPage({
   // Active-filter chips: each links to the current URL minus that one value.
   const chips: { key: string; value: string; label: string }[] = [
     ...(searchText ? [{ key: "q", value: searchText, label: `Search: "${searchText}"` }] : []),
-    ...selectedStatuses.map((v) => ({ key: "status", value: v, label: STATUS_LABELS[v as DeviceStatus] ?? v })),
+    ...selectedStatuses.map((v) => ({ key: "status", value: v, label: statusLabel(v) })),
     ...all(params.center).map((v) => ({ key: "center", value: v, label: v })),
     ...all(params.department).map((v) => ({ key: "department", value: v, label: v })),
     ...all(params.deviceTypeId).map((v) => ({ key: "deviceTypeId", value: v, label: deviceTypes.find((t) => t.id === v)?.name ?? v })),

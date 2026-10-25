@@ -4,112 +4,82 @@ import { prisma } from "@/lib/prisma";
 import { DeviceStatus, EmployeeStatus } from "@prisma/client";
 import SearchBox from "./search-box";
 import { getEmployeesWithoutDevices } from "@/lib/employees-without-devices";
-
-const EMPLOYEE_STATUS_LABELS: Record<EmployeeStatus, string> = {
-  ACTIVE: "Active",
-  RESIGNED: "Resigned",
-  TRANSFERRED: "Transferred",
-};
-
-const STATUS_LABELS: Record<DeviceStatus, string> = {
-  IN_STOCK: "In Stock",
-  DEPLOYED: "Deployed",
-  IN_REPAIR: "In Repair",
-  LOST: "Lost",
-  STOLEN: "Stolen",
-  BROKEN: "Broken",
-  RETIRED: "Retired",
-};
-
-const STATUS_BADGE: Record<DeviceStatus, string> = {
-  IN_STOCK: "bg-blue-50 text-blue-700",
-  DEPLOYED: "bg-green-50 text-green-700",
-  IN_REPAIR: "bg-amber-50 text-amber-700",
-  LOST: "bg-red-50 text-red-700",
-  STOLEN: "bg-red-50 text-red-700",
-  BROKEN: "bg-red-50 text-red-700",
-  RETIRED: "bg-slate-100 text-slate-700",
-};
-
-async function getStatusCounts() {
-  const grouped = await prisma.device.groupBy({
-    by: ["status"],
-    _count: { status: true },
-  });
-
-  const countFor = (statuses: DeviceStatus[]) =>
-    grouped
-      .filter((g) => statuses.includes(g.status))
-      .reduce((sum, g) => sum + g._count.status, 0);
-
-  return {
-    inStock: countFor([DeviceStatus.IN_STOCK]),
-    deployed: countFor([DeviceStatus.DEPLOYED]),
-    inRepair: countFor([DeviceStatus.IN_REPAIR]),
-    lostStolenBroken: countFor([DeviceStatus.LOST, DeviceStatus.STOLEN, DeviceStatus.BROKEN]),
-    retired: countFor([DeviceStatus.RETIRED]),
-  };
-}
+import { EMPLOYEE_STATUS_LABELS, STATUS_BADGE, STATUS_LABELS } from "@/lib/statuses";
 
 type StatusCounts = Partial<Record<DeviceStatus, number>>;
 type DeptBreakdown = { department: string; total: number; statusCounts: StatusCounts };
 type CenterBreakdown = { center: string; total: number; statusCounts: StatusCounts; departments: DeptBreakdown[] };
 type DeviceTypeBreakdown = { deviceTypeId: string; deviceTypeName: string; total: number; statusCounts: StatusCounts };
 
-function addStatus(counts: StatusCounts, status: DeviceStatus) {
-  counts[status] = (counts[status] ?? 0) + 1;
+function addStatus(counts: StatusCounts, status: DeviceStatus, n: number) {
+  counts[status] = (counts[status] ?? 0) + n;
 }
 
-async function getLocationBreakdown(): Promise<CenterBreakdown[]> {
-  const devices = await prisma.device.findMany({
-    select: { status: true, location: { select: { center: true, department: true } } },
-  });
+const sumCounts = (counts: StatusCounts) => Object.values(counts).reduce((a, b) => a + b, 0);
 
+/** Status tiles, Center/Department and Device Type breakdowns from one
+ * grouped count, instead of reading every device row. */
+async function getBreakdowns() {
+  const [grouped, locations, deviceTypes] = await Promise.all([
+    prisma.device.groupBy({ by: ["status", "locationId", "deviceTypeId"], _count: { _all: true } }),
+    prisma.location.findMany({ select: { id: true, center: true, department: true } }),
+    prisma.deviceType.findMany({ select: { id: true, name: true } }),
+  ]);
+  const locationById = new Map(locations.map((l) => [l.id, l]));
+  const typeNameById = new Map(deviceTypes.map((t) => [t.id, t.name]));
+
+  const statusTotals: StatusCounts = {};
   const byCenter = new Map<string, { statusCounts: StatusCounts; depts: Map<string, DeptBreakdown> }>();
+  const byType = new Map<string, StatusCounts>();
 
-  for (const d of devices) {
-    const { center, department } = d.location;
+  for (const g of grouped) {
+    const n = g._count._all;
+    const { center, department } = locationById.get(g.locationId)!;
+    addStatus(statusTotals, g.status, n);
+
     if (!byCenter.has(center)) byCenter.set(center, { statusCounts: {}, depts: new Map() });
     const centerEntry = byCenter.get(center)!;
-    addStatus(centerEntry.statusCounts, d.status);
-
+    addStatus(centerEntry.statusCounts, g.status, n);
     if (!centerEntry.depts.has(department)) {
       centerEntry.depts.set(department, { department, total: 0, statusCounts: {} });
     }
     const deptEntry = centerEntry.depts.get(department)!;
-    deptEntry.total += 1;
-    addStatus(deptEntry.statusCounts, d.status);
+    deptEntry.total += n;
+    addStatus(deptEntry.statusCounts, g.status, n);
+
+    if (!byType.has(g.deviceTypeId)) byType.set(g.deviceTypeId, {});
+    addStatus(byType.get(g.deviceTypeId)!, g.status, n);
   }
 
-  const result: CenterBreakdown[] = Array.from(byCenter.entries()).map(([center, entry]) => ({
-    center,
-    total: Object.values(entry.statusCounts).reduce((a, b) => a + b, 0),
-    statusCounts: entry.statusCounts,
-    departments: Array.from(entry.depts.values()).sort((a, b) => b.total - a.total),
-  }));
+  const countFor = (statuses: DeviceStatus[]) => statuses.reduce((sum, s) => sum + (statusTotals[s] ?? 0), 0);
+  const counts = {
+    inStock: countFor([DeviceStatus.IN_STOCK]),
+    deployed: countFor([DeviceStatus.DEPLOYED]),
+    inRepair: countFor([DeviceStatus.IN_REPAIR]),
+    lostStolenBroken: countFor([DeviceStatus.LOST, DeviceStatus.STOLEN, DeviceStatus.BROKEN]),
+    retired: countFor([DeviceStatus.RETIRED]),
+  };
 
-  return result.sort((a, b) => b.total - a.total);
-}
+  const breakdown: CenterBreakdown[] = Array.from(byCenter.entries())
+    .map(([center, entry]) => ({
+      center,
+      total: sumCounts(entry.statusCounts),
+      statusCounts: entry.statusCounts,
+      departments: Array.from(entry.depts.values()).sort((a, b) => b.total - a.total || a.department.localeCompare(b.department)),
+    }))
+    .sort((a, b) => b.total - a.total || a.center.localeCompare(b.center));
 
-async function getDeviceTypeBreakdown(): Promise<DeviceTypeBreakdown[]> {
-  const devices = await prisma.device.findMany({
-    select: { status: true, deviceTypeId: true, deviceType: { select: { name: true } } },
-  });
+  const typeBreakdown: DeviceTypeBreakdown[] = Array.from(byType.entries())
+    .map(([deviceTypeId, statusCounts]) => ({
+      deviceTypeId,
+      deviceTypeName: typeNameById.get(deviceTypeId)!,
+      total: sumCounts(statusCounts),
+      statusCounts,
+    }))
+    .sort((a, b) => b.total - a.total || a.deviceTypeName.localeCompare(b.deviceTypeName));
 
-  const byType = new Map<string, { name: string; statusCounts: StatusCounts }>();
-  for (const d of devices) {
-    if (!byType.has(d.deviceTypeId)) byType.set(d.deviceTypeId, { name: d.deviceType.name, statusCounts: {} });
-    addStatus(byType.get(d.deviceTypeId)!.statusCounts, d.status);
-  }
-
-  const result: DeviceTypeBreakdown[] = Array.from(byType.entries()).map(([deviceTypeId, entry]) => ({
-    deviceTypeId,
-    deviceTypeName: entry.name,
-    total: Object.values(entry.statusCounts).reduce((a, b) => a + b, 0),
-    statusCounts: entry.statusCounts,
-  }));
-
-  return result.sort((a, b) => b.total - a.total);
+  const centers = Array.from(new Set(locations.map((l) => l.center))).sort();
+  return { counts, breakdown, typeBreakdown, centers, grandTotal: sumCounts(statusTotals) };
 }
 
 async function getStaleAssignments() {
@@ -144,22 +114,15 @@ export default async function DashboardPage({
 }) {
   const { missingCenter } = await searchParams;
   const selectedCenter = typeof missingCenter === "string" ? missingCenter : "";
-  const [counts, breakdown, typeBreakdown, staleAssignments, employeesWithoutDevices, centerRows] = await Promise.all([
-    getStatusCounts(),
-    getLocationBreakdown(),
-    getDeviceTypeBreakdown(),
-    getStaleAssignments(),
-    getEmployeesWithoutDevices(selectedCenter),
-    prisma.location.findMany({ distinct: ["center"], select: { center: true }, orderBy: { center: "asc" } }),
-  ]);
-  const grandTotal = breakdown.reduce((sum, c) => sum + c.total, 0);
+  const [{ counts, breakdown, typeBreakdown, centers, grandTotal }, staleAssignments, employeesWithoutDevices] =
+    await Promise.all([getBreakdowns(), getStaleAssignments(), getEmployeesWithoutDevices(selectedCenter)]);
 
   const tiles = [
-    { label: "In Stock", value: counts.inStock, color: "bg-blue-50 text-blue-700", status: "IN_STOCK" },
-    { label: "Deployed", value: counts.deployed, color: "bg-green-50 text-green-700", status: "DEPLOYED" },
-    { label: "In Repair", value: counts.inRepair, color: "bg-amber-50 text-amber-700", status: "IN_REPAIR" },
-    { label: "Lost / Stolen / Broken", value: counts.lostStolenBroken, color: "bg-red-50 text-red-700", status: "LOST,STOLEN,BROKEN" },
-    { label: "Retired", value: counts.retired, color: "bg-slate-100 text-slate-700", status: "RETIRED" },
+    { label: STATUS_LABELS.IN_STOCK, value: counts.inStock, color: STATUS_BADGE.IN_STOCK, status: "IN_STOCK" },
+    { label: STATUS_LABELS.DEPLOYED, value: counts.deployed, color: STATUS_BADGE.DEPLOYED, status: "DEPLOYED" },
+    { label: STATUS_LABELS.IN_REPAIR, value: counts.inRepair, color: STATUS_BADGE.IN_REPAIR, status: "IN_REPAIR" },
+    { label: "Lost / Stolen / Broken", value: counts.lostStolenBroken, color: STATUS_BADGE.LOST, status: "LOST,STOLEN,BROKEN" },
+    { label: STATUS_LABELS.RETIRED, value: counts.retired, color: STATUS_BADGE.RETIRED, status: "RETIRED" },
   ];
 
   return (
@@ -353,7 +316,7 @@ export default async function DashboardPage({
           <div className="flex items-center gap-2 shrink-0">
             <select name="missingCenter" defaultValue={selectedCenter} className="rounded-md border border-slate-400 px-2 py-1 text-sm">
               <option value="">All centers</option>
-              {centerRows.map(({ center }) => (
+              {centers.map((center) => (
                 <option key={center} value={center}>{center}</option>
               ))}
             </select>

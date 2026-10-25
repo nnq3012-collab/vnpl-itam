@@ -1,6 +1,5 @@
-import { NextResponse } from "next/server";
 import { requireFeature } from "@/lib/api-guard";
-import * as XLSX from "xlsx";
+import { spreadsheetResponse } from "@/lib/spreadsheet";
 
 export async function GET() {
   const guard = await requireFeature("import.devices");
@@ -37,15 +36,5 @@ export async function GET() {
     },
   ];
 
-  const worksheet = XLSX.utils.json_to_sheet(rows);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "DeviceMaster");
-  const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
-
-  return new NextResponse(buffer, {
-    headers: {
-      "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": 'attachment; filename="device-import-template.xlsx"',
-    },
-  });
+  return spreadsheetResponse(rows, "DeviceMaster", "device-import-template");
 }

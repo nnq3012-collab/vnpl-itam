@@ -2,17 +2,9 @@ import "server-only";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import type { Role } from "@prisma/client";
+import { SESSION_COOKIE, getSecretKey } from "./session-token";
 
-const SESSION_COOKIE = "itam_session";
 const SESSION_DURATION_SECONDS = 60 * 60 * 8; // 8 hours
-
-function getSecretKey() {
-  const secret = process.env.SESSION_SECRET;
-  if (!secret) {
-    throw new Error("SESSION_SECRET environment variable is not set");
-  }
-  return new TextEncoder().encode(secret);
-}
 
 export type SessionPayload = {
   userId: string;
@@ -55,5 +47,3 @@ export async function getSession(): Promise<SessionPayload | null> {
     return null;
   }
 }
-
-export { SESSION_COOKIE };

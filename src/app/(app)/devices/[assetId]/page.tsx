@@ -2,7 +2,8 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
-import { Role } from "@prisma/client";
+import { canUseFeature } from "@/lib/feature-access";
+import { STATUS_LABELS } from "@/lib/statuses";
 import { classifyAuditEvent, AUDIT_EVENT_BADGE, parseMaintenanceDescription } from "@/lib/audit-log-display";
 import MaintenanceForm from "./maintenance-form";
 
@@ -26,8 +27,12 @@ export default async function DeviceDetailPage({
     orderBy: { timestamp: "desc" },
   });
 
-  const canEdit = session.role === Role.IT || session.role === Role.HR;
-  const canLogMaintenance = session.role === Role.IT;
+  const [canEditAll, canAssign, canLogMaintenance] = await Promise.all([
+    canUseFeature(session.role, "devices.edit"),
+    canUseFeature(session.role, "devices.assign"),
+    canUseFeature(session.role, "devices.maintenance"),
+  ]);
+  const canEdit = canEditAll || canAssign;
 
   return (
     <div className="space-y-4 max-w-3xl">
@@ -51,7 +56,7 @@ export default async function DeviceDetailPage({
       <div className="bg-white rounded-lg shadow p-6 grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
         <Field label="Device Type" value={device.deviceType.name} />
         <Field label="Make/Model" value={device.makeModel} />
-        <Field label="Status" value={device.status} />
+        <Field label="Status" value={STATUS_LABELS[device.status]} />
         <Field label="CPU" value={device.cpu} />
         <Field label="RAM" value={device.ram} />
         <Field label="Storage" value={device.storage} />

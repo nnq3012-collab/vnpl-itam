@@ -43,6 +43,13 @@ function findSheet(workbook: XLSX.WorkBook, candidates: string[]): string {
   return match ?? workbook.SheetNames[0];
 }
 
+/** Reads the sheet matching `candidates` (else the first sheet) as row objects. */
+async function readSheet(file: File, candidates: string[]) {
+  const wb = XLSX.read(await file.arrayBuffer(), { type: "array" });
+  const sheetName = findSheet(wb, candidates);
+  return { sheetName, raw: XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets[sheetName], { defval: "" }) };
+}
+
 export default function ImportClient({
   canImportDevices,
   canImportEmployees,
@@ -84,41 +91,34 @@ function DeviceImport() {
   const [error, setError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
 
-  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     setError(null);
     setResult(null);
 
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      try {
-        const data = evt.target?.result;
-        const wb = XLSX.read(data, { type: "array" });
-        const sheetName = findSheet(wb, ["DeviceMaster", "Device Master", "Devices"]);
-        setSheetUsed(sheetName);
-        const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets[sheetName], { defval: "" });
+    try {
+      const { sheetName, raw } = await readSheet(file, ["DeviceMaster", "Device Master", "Devices"]);
+      setSheetUsed(sheetName);
 
-        const parsed: DeviceImportRow[] = raw.map((r) => ({
-          assetId: pick(r, ["Asset ID", "AssetId"]),
-          deviceType: pick(r, ["Device Type", "DeviceType"]),
-          makeModel: pick(r, ["Make/Model", "Make Model", "MakeModel"]),
-          cpu: pick(r, ["CPU"]),
-          ram: pick(r, ["RAM"]),
-          storage: pick(r, ["Storage"]),
-          serialNumber: pick(r, ["Serial Number", "SerialNumber"]),
-          status: pick(r, ["Status"]),
-          center: pick(r, ["Center", "Location"]),
-          department: pick(r, ["Department"]),
-          assignedUserEmail: pick(r, ["Assigned Email", "Assigned User Email", "AssignedEmail"]),
-          assignedUserName: pick(r, ["Assigned User", "AssignedUser"]),
-        }));
-        setRows(parsed);
-      } catch {
-        setError("Could not parse this file. Make sure it's a valid .xlsx/.xls/.csv file.");
-      }
-    };
-    reader.readAsArrayBuffer(file);
+      const parsed: DeviceImportRow[] = raw.map((r) => ({
+        assetId: pick(r, ["Asset ID", "AssetId"]),
+        deviceType: pick(r, ["Device Type", "DeviceType"]),
+        makeModel: pick(r, ["Make/Model", "Make Model", "MakeModel"]),
+        cpu: pick(r, ["CPU"]),
+        ram: pick(r, ["RAM"]),
+        storage: pick(r, ["Storage"]),
+        serialNumber: pick(r, ["Serial Number", "SerialNumber"]),
+        status: pick(r, ["Status"]),
+        center: pick(r, ["Center", "Location"]),
+        department: pick(r, ["Department"]),
+        assignedUserEmail: pick(r, ["Assigned Email", "Assigned User Email", "AssignedEmail"]),
+        assignedUserName: pick(r, ["Assigned User", "AssignedUser"]),
+      }));
+      setRows(parsed);
+    } catch {
+      setError("Could not parse this file. Make sure it's a valid .xlsx/.xls/.csv file.");
+    }
   }
 
   const seenAssetIds = new Set<string>();
@@ -244,34 +244,27 @@ function EmployeeImport() {
   const [error, setError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
 
-  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     setError(null);
     setResult(null);
 
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      try {
-        const data = evt.target?.result;
-        const wb = XLSX.read(data, { type: "array" });
-        const sheetName = findSheet(wb, ["Users", "Employees"]);
-        setSheetUsed(sheetName);
-        const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets[sheetName], { defval: "" });
+    try {
+      const { sheetName, raw } = await readSheet(file, ["Users", "Employees"]);
+      setSheetUsed(sheetName);
 
-        const parsed: EmployeeImportRow[] = raw.map((r) => ({
-          employeeId: pick(r, ["Employee ID", "EmployeeId"]),
-          fullName: pick(r, ["Full Name", "FullName", "Name"]),
-          email: pick(r, ["Email"]),
-          center: pick(r, ["Center", "Location"]),
-          department: pick(r, ["Department"]),
-        }));
-        setRows(parsed);
-      } catch {
-        setError("Could not parse this file. Make sure it's a valid .xlsx/.xls/.csv file.");
-      }
-    };
-    reader.readAsArrayBuffer(file);
+      const parsed: EmployeeImportRow[] = raw.map((r) => ({
+        employeeId: pick(r, ["Employee ID", "EmployeeId"]),
+        fullName: pick(r, ["Full Name", "FullName", "Name"]),
+        email: pick(r, ["Email"]),
+        center: pick(r, ["Center", "Location"]),
+        department: pick(r, ["Department"]),
+      }));
+      setRows(parsed);
+    } catch {
+      setError("Could not parse this file. Make sure it's a valid .xlsx/.xls/.csv file.");
+    }
   }
 
   const rowIssues = rows.map((r) => (!r.employeeId || !r.fullName ? "Missing Employee ID or Full Name" : null));

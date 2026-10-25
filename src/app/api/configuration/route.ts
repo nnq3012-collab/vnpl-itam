@@ -1,24 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireConfigAdmin } from "@/lib/api-guard";
-import { getAllFeatureRoles } from "@/lib/feature-access";
 import { FEATURES } from "@/lib/features";
 import { Role } from "@prisma/client";
-
-export async function GET() {
-  const guard = await requireConfigAdmin();
-  if ("error" in guard) return guard.error;
-
-  const roleMap = await getAllFeatureRoles();
-  const features = FEATURES.map((f) => ({
-    key: f.key,
-    label: f.label,
-    description: f.description,
-    defaultRoles: f.defaultRoles,
-    roles: roleMap[f.key],
-  }));
-  return NextResponse.json({ features });
-}
 
 export async function PUT(request: NextRequest) {
   const guard = await requireConfigAdmin();

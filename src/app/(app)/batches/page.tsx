@@ -3,8 +3,8 @@ import { getSession } from "@/lib/session";
 import { canUseFeature } from "@/lib/feature-access";
 import { prisma } from "@/lib/prisma";
 import BatchesClient from "./client";
+import { statusLabel } from "@/lib/statuses";
 
-const humanize = (s: string) => s.toLowerCase().replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
 export default async function BatchesPage() {
   const session = await getSession();
@@ -29,7 +29,7 @@ export default async function BatchesPage() {
             name: b.name,
             createdAt: b.createdAt.toLocaleDateString(),
             deviceCount: b.devices.length,
-            breakdown: Array.from(counts, ([status, n]) => `${n} ${humanize(status)}`).join(" · "),
+            breakdown: Array.from(counts, ([status, n]) => `${n} ${statusLabel(status)}`).join(" · "),
           };
         })}
       />
